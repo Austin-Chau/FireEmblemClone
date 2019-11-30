@@ -9,6 +9,7 @@ public class _Camera : MonoBehaviour
     public GameObject gameManager;
 
     public float panSensitivity = 5f;
+    private Vector3 zShift = new Vector3(0, 0, -10);
 
     //create the gamemanager
     void Awake()
@@ -21,9 +22,7 @@ public class _Camera : MonoBehaviour
 
     void Update()
     {
-        float x = Input.GetAxisRaw("Horizontal") * Time.deltaTime;
-        float y = Input.GetAxisRaw("Vertical") * Time.deltaTime;
-
-        transform.Translate(x*panSensitivity, y*panSensitivity,0);
+        transform.SetPositionAndRotation(_GameManager.instance.cursorPosition, Quaternion.identity);
+        transform.Translate(zShift);
     }
 }

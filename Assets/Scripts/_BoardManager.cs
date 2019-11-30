@@ -13,7 +13,7 @@ public class _BoardManager : MonoBehaviour
     //Arrays of prefabs, to be instanced upon board creation
     public GameObject[] floorTiles;
     public GameObject[] outerWallTiles;
-    //public GameObject[] enemyTiles;
+    public GameObject[] enemyTiles;
 
     //Places to store all the tiles to avoid clutter in the hierarchy
     private Transform boardHolder;
@@ -22,7 +22,7 @@ public class _BoardManager : MonoBehaviour
     //A place to store all possible positions to place tiles
     private List<Vector3> gridPositions = new List<Vector3>();
 
-    private int enemyCount = 4;
+    private int enemyCount = 1;
 
     //Initialize all the possible positions (Besides the outer rim)
     void InitializeList()
@@ -92,6 +92,6 @@ public class _BoardManager : MonoBehaviour
 
         BoardSetup();
         InitializeList();
-        //LayoutObjectsAtRandom(enemyTiles, enemyCount, enemyCount);
+        LayoutObjectsAtRandom(enemyTiles, enemyCount, enemyCount);
     }
 }
