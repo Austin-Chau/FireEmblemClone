@@ -28,9 +28,17 @@ public class Tile
         else MovementWeight = int.MaxValue;
     }
 
+    #region Public Variables
+    /// <summary>
+    /// Checks if there's a unit in this space already
+    /// </summary>
+    public bool Occupied { get; private set; }
+
+    public TileType type { get; private set; }
+    #endregion
+
     #region Private Variables
 
-    TileType type;
 
     GameObject tileObject;
 

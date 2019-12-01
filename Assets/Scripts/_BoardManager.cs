@@ -7,74 +7,21 @@ public class _BoardManager : MonoBehaviour
     //how wide and tall the level is (does not include the outer walls on the outside)
     public int columns = 12;
     public int rows = 12;
-    //An edge to not spawn interactable tiles
-    public int edgeWidth = 1;
 
-    //Arrays of prefabs, to be instanced upon board creation
-    public GameObject[] floorTiles;
-    public GameObject[] outerWallTiles;
     public GameObject[] enemyTiles;
-
-    //Places to store all the tiles to avoid clutter in the hierarchy
-    private Transform boardHolder;
-    private Transform tileHolder;
-
     Board board;
 
-    //A place to store all possible positions to place tiles
-    private List<Vector3> gridPositions = new List<Vector3>();
-
     private int enemyCount = 1;
-
-    //Initialize all the possible positions (Besides the outer rim)
-    void InitializeList()
-    {
-        gridPositions.Clear();
-
-        for (int x = edgeWidth; x < columns - edgeWidth; x++)
-        {
-            for (int y = edgeWidth; y < rows - edgeWidth; y++)
-            {
-                gridPositions.Add(new Vector3(x, y, 0f));
-            }
-        }
-    }
-
-    //Place the outer all and floor, all non-interactable.
-    void BoardSetup ()
-    {
-        //for (int x = -1; x < columns + 1; x++)
-        //{
-        //    for (int y = -1; y < rows + 1; y++)
-        //    {
-        //        GameObject toInstantiate;
-        //        if (x == -1 || x == columns || y == -1 || y == rows)
-        //        {
-        //            toInstantiate = outerWallTiles[Random.Range(0, outerWallTiles.Length)];
-        //        }
-        //        else
-        //        {
-        //            toInstantiate = floorTiles[Random.Range(0, floorTiles.Length)];
-        //        }
-
-        //        GameObject instance = Instantiate(toInstantiate, new Vector3(x, y, 0f), Quaternion.identity, boardHolder) as GameObject;
-        //    }
-        //}
-        Debug.Log("Generating Board");
-        board = new Board(rows, columns);
-    }
-
+    
     //Gets a random position out of all the gridpositions we have instanced
     //removes it from gridPositions if desired
-    Vector3 RandomPosition(bool remove)
+    Vector2 RandomPosition(bool remove)
     {
-        int randomIndex = Random.Range(0, gridPositions.Count);
-        Vector3 randomPosition = gridPositions[randomIndex];
-        if (remove)
-        {
-            gridPositions.RemoveAt(randomIndex);
-        }
-        return randomPosition;
+        int randomY = Random.Range(0, board.columns);
+        int randomX = Random.Range(0, board.rows);
+        if (!board.IsTileOccupied(randomX, randomY))
+            return new Vector2(randomX, randomY);
+        else return Vector2.zero;
     }
 
     //Populates the active field with from the desired array within the given range
@@ -91,11 +38,8 @@ public class _BoardManager : MonoBehaviour
 
     public void SetupScene()
     {
-        boardHolder = new GameObject("Board").transform;
-        tileHolder = new GameObject("BoardTiles").transform;
-
-        BoardSetup();
-        InitializeList();
+        board = new Board(rows, columns);
+        
         LayoutObjectsAtRandom(enemyTiles, enemyCount, enemyCount);
     }
 }
