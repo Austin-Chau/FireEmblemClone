@@ -19,6 +19,8 @@ public class _BoardManager : MonoBehaviour
     private Transform boardHolder;
     private Transform tileHolder;
 
+    Board board;
+
     //A place to store all possible positions to place tiles
     private List<Vector3> gridPositions = new List<Vector3>();
 
@@ -41,23 +43,25 @@ public class _BoardManager : MonoBehaviour
     //Place the outer all and floor, all non-interactable.
     void BoardSetup ()
     {
-        for (int x = -1; x < columns + 1; x++)
-        {
-            for (int y = -1; y < rows + 1; y++)
-            {
-                GameObject toInstantiate;
-                if (x == -1 || x == columns || y == -1 || y == rows)
-                {
-                    toInstantiate = outerWallTiles[Random.Range(0, outerWallTiles.Length)];
-                }
-                else
-                {
-                    toInstantiate = floorTiles[Random.Range(0, floorTiles.Length)];
-                }
+        //for (int x = -1; x < columns + 1; x++)
+        //{
+        //    for (int y = -1; y < rows + 1; y++)
+        //    {
+        //        GameObject toInstantiate;
+        //        if (x == -1 || x == columns || y == -1 || y == rows)
+        //        {
+        //            toInstantiate = outerWallTiles[Random.Range(0, outerWallTiles.Length)];
+        //        }
+        //        else
+        //        {
+        //            toInstantiate = floorTiles[Random.Range(0, floorTiles.Length)];
+        //        }
 
-                GameObject instance = Instantiate(toInstantiate, new Vector3(x, y, 0f), Quaternion.identity, boardHolder) as GameObject;
-            }
-        }
+        //        GameObject instance = Instantiate(toInstantiate, new Vector3(x, y, 0f), Quaternion.identity, boardHolder) as GameObject;
+        //    }
+        //}
+        Debug.Log("Generating Board");
+        board = new Board(rows, columns);
     }
 
     //Gets a random position out of all the gridpositions we have instanced
