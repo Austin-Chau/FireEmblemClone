@@ -7,7 +7,7 @@ public class Enemy : Unit
     protected override void Start()
     {
         base.Start();
-        side = "enemy";
+        team = "enemy";
         _GameManager.instance.AddEnemyToList(this);
     }
     // Update is called once per frame

@@ -9,6 +9,8 @@ public class _GameManager : MonoBehaviour
 
     public _BoardManager boardScript;
 
+    public Board board;
+
     //Various bools used by the manager to make sure states are transitioned properly
     public bool playersTurn = true;
     public bool moving = false;
@@ -47,12 +49,12 @@ public class _GameManager : MonoBehaviour
         enemies.Add(enemy);
     }
 
-    //Actually setting up the level. Can be called multiple times.
+    //Actually setting up the level. Can be called multiple times, after clearing the level.
     void InitGame()
     {
         doingSetup = true;
         enemies.Clear();
-        boardScript.SetupScene();
+        board = boardScript.SetupScene();
         doingSetup = false;
     }
 

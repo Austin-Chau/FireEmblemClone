@@ -18,7 +18,7 @@ public class ActionSpace : MonoBehaviour
         if (Input.GetButtonDown("confirm"))
         {
             Vector3 position = _GameManager.instance.cursorPosition;
-            if (unitScript.side == "player" && Mathf.Abs(transform.position.x - position.x) < .5 && Mathf.Abs(transform.position.y - position.y) < .5)
+            if (unitScript.team == "player" && Mathf.Abs(transform.position.x - position.x) < .5 && Mathf.Abs(transform.position.y - position.y) < .5)
             {
                 if (action == "act")
                 {

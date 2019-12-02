@@ -24,6 +24,7 @@ public class Tile
         CreateTile();
         tileObject.transform.position = pos;
         tileObject.transform.parent = parent;
+        tileScript = tileObject.GetComponent<TileScript>();
         if (_type == TileType.Ground) MovementWeight = 1;
         else MovementWeight = int.MaxValue;
     }
@@ -32,7 +33,18 @@ public class Tile
     /// <summary>
     /// Checks if there's a unit in this space already
     /// </summary>
-    public bool Occupied { get; private set; }
+    public bool Occupied
+    {
+        get
+        {
+            return occupied;
+        }
+        set
+        {
+            occupied = value;
+            tileScript.Occupied = value;
+        }
+    }
 
     public TileType type { get; private set; }
     #endregion
@@ -48,6 +60,9 @@ public class Tile
     //Amount of movement it takes to get to the tile
     //MAX_INT if impassable.
     int MovementWeight;
+
+    private TileScript tileScript;
+    private bool occupied;
 
     #region Constants
 
@@ -88,6 +103,7 @@ public class Tile
             AdjacentTiles[dir] = tile;
         }
     }
+
     #endregion
 
     #region Private Methods

@@ -12,16 +12,17 @@ public class _BoardManager : MonoBehaviour
     Board board;
 
     private int enemyCount = 1;
-    
-    //Gets a random position out of all the gridpositions we have instanced
-    //removes it from gridPositions if desired
-    Vector2 RandomPosition(bool remove)
+    private Tile[,] Tiles;
+
+    /// <summary>
+    /// Returns a random position from the current board size.
+    /// </summary>
+    /// <returns>The position.</returns>
+    Vector2 RandomPosition()
     {
         int randomY = Random.Range(0, board.columns);
         int randomX = Random.Range(0, board.rows);
-        if (!board.IsTileOccupied(randomX, randomY))
-            return new Vector2(randomX, randomY);
-        else return Vector2.zero;
+        return new Vector2(randomX, randomY);
     }
 
     //Populates the active field with from the desired array within the given range
@@ -30,16 +31,23 @@ public class _BoardManager : MonoBehaviour
         int count = Random.Range(min, max + 1);
         for (int i = 0; i < count; i++) 
         {
-            Vector3 randomPosition = RandomPosition(true);
+            Vector3 randomPosition = RandomPosition();
+            if (board.IsTileOccupied((int)randomPosition.x, (int)randomPosition.y))
+            {
+                randomPosition = Vector3.zero;
+            }
             GameObject tileChoice = tileArray[Random.Range(0, tileArray.Length)];
+            Tiles[(int)randomPosition.x, (int)randomPosition.y].Occupied = true;
             Instantiate(tileChoice, randomPosition, Quaternion.identity);
         }
     }
 
-    public void SetupScene()
+    public Board SetupScene()
     {
         board = new Board(rows, columns);
-        
+        Tiles = board.Tiles;
+
         LayoutObjectsAtRandom(enemyTiles, enemyCount, enemyCount);
+        return board;
     }
 }

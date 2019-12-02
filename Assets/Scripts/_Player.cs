@@ -7,7 +7,7 @@ public class _Player : Unit
     protected override void Start()
     {
         base.Start();
-        side = "player";
+        team = "player";
         coordinates = new Vector2(1, 1);
         rb2D.MovePosition(coordinates);
     }

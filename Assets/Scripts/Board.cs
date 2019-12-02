@@ -14,6 +14,17 @@ public class Board
     public int rows { get; private set; }
     #endregion
 
+    #region Constants
+
+    private const string TileGameObjectResource =
+        "Prefabs/Tile";
+    private const string GroundSpriteResource =
+        "Tiles/Grounds";
+    private const string WallSpriteResource =
+        "Tiles/Walls";
+
+    #endregion
+
     GameObject boardObject;
     Transform WallsParent;
     Transform FloorsParent;
@@ -39,7 +50,7 @@ public class Board
             GenerateTileMap();
         }
     }
-
+    
     /// <summary>
     /// Checks if value is filled by another unit. 
     /// Currently checks if tile is Wall as well, but will have to change if walls are passable
