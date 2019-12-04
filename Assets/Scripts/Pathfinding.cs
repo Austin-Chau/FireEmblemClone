@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public static class Pathfinding
@@ -10,21 +11,34 @@ public static class Pathfinding
     /// <returns>The steps. Each step should be a vector with integer coordinates.</returns>
     /// <param name="InitialPosition">Initial position of the unit.</param>
     /// <param name="FinalPosition">Final position of the unit.</param>
-    public static Stack<Vector2> GenerateSteps(Vector2 InitialPosition, Vector2 FinalPosition)
+    /// <param name="PossibleTiles">A list of all possible nodes that can be travelled</param>
+    public static Stack<Tile> GenerateSteps(Tile InitialTile, Tile FinalTile, Dictionary<Tile, int> tileDistances)
     {
-        Stack<Vector2> steps = new Stack<Vector2>();
+        Stack<Tile> steps = new Stack<Tile>();
+        Tile currentTile = FinalTile;
+        Tile lowestTile;
+        int lowestValue;
+        List<Tile> tilesToCheck = new List<Tile>();
 
-        //Currently, just go horizontal in one direction then vertical to get to the desired spot
-        bool right = InitialPosition.x < FinalPosition.x;
-        bool up = InitialPosition.y < FinalPosition.y;
-        for (int i = 0; i < Mathf.Abs(FinalPosition.x - InitialPosition.x); i++)
-        {
-            steps.Push(right ? new Vector2(1, 0) : new Vector2(-1, 0));
+        steps.Push(currentTile);
+
+        while (steps.Peek() != InitialTile) {
+            lowestValue = int.MaxValue;
+            lowestTile = null;
+
+            tilesToCheck = currentTile.GetAdjacentTiles();
+            foreach(Tile tile in tilesToCheck)
+            {
+                if(tileDistances[tile] < lowestValue)
+                {
+                    lowestValue = tileDistances[tile];
+                    lowestTile = tile;
+                }
+            }
+            steps.Push(lowestTile);
+            currentTile = lowestTile;
         }
-        for (int i = 0; i < Mathf.Abs(FinalPosition.y - InitialPosition.y); i++)
-        {
-            steps.Push(up ? new Vector2(0, 1) : new Vector2(0, -1));
-        }
+        
         return steps;
     }
 
@@ -34,16 +48,42 @@ public static class Pathfinding
     /// <returns>The list of positions.</returns>
     /// <param name="UnitPosition">Current position in integer coordinates of the unit.</param>
     /// <param name="moveRadius">Move radius of the unit.</param>
-    public static List<Vector2> GenerateMoveTree(Vector2 UnitPosition, int moveRadius)
+    public static Dictionary<Tile, int> GenerateMoveTree(Tile unitTile, int moveRadius)
     {
-        List<Vector2> movePositions = new List<Vector2>();
-        for (int i = -moveRadius; i <= moveRadius; i++)
-        {
-            for (int j = -(moveRadius - Mathf.Abs(i)); j <= moveRadius - Mathf.Abs(i); j++)
-            {
-                movePositions.Add(new Vector2(i, j)+UnitPosition);
-            }
-        }
-        return movePositions;
+        Dictionary<Tile, int> tileDistances = new Dictionary<Tile, int>();
+        int moveCounter = 0;
+
+        tileDistances[unitTile] = 0;
+
+        FloodFill(moveCounter, moveRadius, unitTile, tileDistances);
+        
+        return tileDistances;
+    }
+
+    /// <summary>
+    /// FloodFill Algorithm for finding distances from a point of origin
+    /// </summary>
+    /// <param name="count">Amount of movement units currently moved</param>
+    /// <param name="moveRadius">Limit that unit can move</param>
+    /// <param name="currentTile">Tile currently being checked</param>
+    /// <param name="tileDistances">A dictionary of tiles with their distances</param>
+    private static void FloodFill(int count, int moveRadius, Tile currentTile, Dictionary<Tile, int> tileDistances)
+    {
+        int distanceFromOrigin = currentTile.MovementWeight + count;
+        //If going to the tile would go over the moveRadius, don't add to the list
+        if (distanceFromOrigin > moveRadius) return;
+        if (tileDistances.ContainsKey(currentTile)) return;
+
+        //Otherwise, add to the list and check the adjacent tiles
+        tileDistances[currentTile] = distanceFromOrigin;
+
+        FloodFill(distanceFromOrigin, moveRadius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
+        FloodFill(distanceFromOrigin, moveRadius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances);
+        FloodFill(distanceFromOrigin, moveRadius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances);
+        FloodFill(distanceFromOrigin, moveRadius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances);
     }
 }
