@@ -4,10 +4,7 @@ using UnityEngine;
 
 public abstract class Unit : MonoBehaviour
 {
-    /*
-    Major current issues:
-    -no actual collision detection/intelligent pathfinding, units can move anywhere any time and stand on each other
-     */
+
     #region Public Variables
     public LayerMask blockingLayer;
     public LayerMask actingLayer;

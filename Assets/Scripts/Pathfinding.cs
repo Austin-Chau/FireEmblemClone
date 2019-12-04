@@ -9,9 +9,9 @@ public static class Pathfinding
     /// Generates the series of steps for the unit's path from point A to B.
     /// </summary>
     /// <returns>The steps. Each step should be a vector with integer coordinates.</returns>
-    /// <param name="InitialPosition">Initial position of the unit.</param>
-    /// <param name="FinalPosition">Final position of the unit.</param>
-    /// <param name="PossibleTiles">A list of all possible nodes that can be travelled</param>
+    /// <param name="InitialTile">Initial position of the unit.</param>
+    /// <param name="FinalTile">Final position of the unit.</param>
+    /// <param name="tileDistances">A list of all possible nodes that can be travelled</param>
     public static Stack<Tile> GenerateSteps(Tile InitialTile, Tile FinalTile, Dictionary<Tile, int> tileDistances)
     {
         Stack<Tile> steps = new Stack<Tile>();
@@ -27,6 +27,7 @@ public static class Pathfinding
             lowestTile = null;
 
             tilesToCheck = currentTile.GetAdjacentTiles();
+
             foreach(Tile tile in tilesToCheck)
             {
                 if(tileDistances[tile] < lowestValue)
@@ -46,7 +47,7 @@ public static class Pathfinding
     /// Generates all the tiles a unit can move too. 
     /// </summary>
     /// <returns>The list of positions.</returns>
-    /// <param name="UnitPosition">Current position in integer coordinates of the unit.</param>
+    /// <param name="unitTile">Current position in integer coordinates of the unit.</param>
     /// <param name="moveRadius">Move radius of the unit.</param>
     public static Dictionary<Tile, int> GenerateMoveTree(Tile unitTile, int moveRadius)
     {

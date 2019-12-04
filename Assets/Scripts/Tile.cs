@@ -46,6 +46,8 @@ public class Tile
         }
     }
 
+    public int MovementWeight;
+
     public TileType type { get; private set; }
     #endregion
 
@@ -59,7 +61,6 @@ public class Tile
 
     //Amount of movement it takes to get to the tile
     //MAX_INT if impassable.
-    int MovementWeight;
 
     private TileScript tileScript;
     private bool occupied;
@@ -90,6 +91,21 @@ public class Tile
             return AdjacentTiles[dir];
         else
             return null;
+    }
+
+    public List<Tile> GetAdjacentTiles()
+    {
+        List<Tile> tiles = new List<Tile>();
+
+        foreach (KeyValuePair<AdjacentDirection,Tile> pair in AdjacentTiles)
+        {
+            if (pair.Value != null)
+            {
+                tiles.Add(pair.Value);
+            }
+        }
+
+        return tiles;
     }
 
     public void AddAdjacentTile(AdjacentDirection dir, Tile tile)
