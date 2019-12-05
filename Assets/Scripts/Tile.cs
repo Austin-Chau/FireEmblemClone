@@ -88,7 +88,7 @@ public class Tile
     private Unit currentUnit;
 
     //Four adjacent tiles based on cardinal directions for pathfinding
-    private Dictionary<AdjacentDirection, Tile> AdjacentTiles = new Dictionary<AdjacentDirection, Tile>()
+    private Dictionary<AdjacentDirection, Tile> AdjacentTiles = new Dictionary<AdjacentDirection, Tile>();
 
     #region Constants
 
@@ -112,6 +112,10 @@ public class Tile
     /// <returns>Adjacent Tile, or null if it does not exist (meaning tile is a border tile.)</returns>
     public Tile GetAdjacentTile(AdjacentDirection dir)
     {
+        if (dir == AdjacentDirection.None)
+        {
+            return this; //don't tell chau
+        }
         if (AdjacentTiles.ContainsKey(dir))
             return AdjacentTiles[dir];
         else

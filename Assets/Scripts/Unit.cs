@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class Unit : MonoBehaviour
+public class Unit : MonoBehaviour
 {
 
     #region Public Variables
@@ -14,8 +14,6 @@ public abstract class Unit : MonoBehaviour
 
     public float moveTime = 0.1f;
 
-    public string team;
-
     public bool moving = false;
     public bool moved = false;
     public bool acting = false;
@@ -25,42 +23,33 @@ public abstract class Unit : MonoBehaviour
     public int moveRadius = 3;
     #endregion
 
-    #region Protected Variables
-
-    protected Vector2 coordinates;
-
-    protected Animator animator;
-    protected BoxCollider2D boxCollider;
-    protected Rigidbody2D rb2D;
-
-    protected float inverseMoveTime;
-
-    protected bool unSelected = false;
-    protected bool selected = false;
-
-    protected List<ActionSpace> actSpaces = new List<ActionSpace>();
-    protected Dictionary<Tile, ActionSpace> moveSpaces = new Dictionary<Tile, ActionSpace>();
-
-    #endregion
-
     #region Private variables
 
+    private Team team;
+
+    private Animator animator;
+    private Rigidbody2D rb2D;
+
+    private float inverseMoveTime;
+
+    private Dictionary<Tile, ActionSpace> actionSpaces = new Dictionary<Tile, ActionSpace>();
     private Tile currentTile;
+
     private Dictionary<Tile, int> moveTree;
 
     #endregion
 
-    protected virtual void Start()
+    public void Start()
     {
         animator = GetComponent<Animator>();
-        coordinates = new Vector2(0, 0);
-        coordinates.Set(Mathf.Floor(transform.position.x), Mathf.Floor(transform.position.y));
-        boxCollider = GetComponent<BoxCollider2D>();
         rb2D = GetComponent<Rigidbody2D>();
         inverseMoveTime = 1f / moveTime;
+    }
 
-        //Tentative
-        currentTile = _GameManager.instance.board.Tiles[(int)coordinates.x, (int)coordinates.y];
+    public void CreateUnit(Tile spawnTile, Team _team)
+    {
+        team = _team;
+        currentTile = spawnTile;
         currentTile.CurrentUnit = this;
     }
 
@@ -90,6 +79,7 @@ public abstract class Unit : MonoBehaviour
                 {
                     secondTile = steps.Pop();
                     AdjacentDirection newDirection = Pathfinding.GetAdjacentTilesDirection(firstTile, secondTile);
+                    //if newDirection = none, panic
 
                     if (newDirection != baseDirection)
                     {
@@ -115,7 +105,7 @@ public abstract class Unit : MonoBehaviour
     /// </summary>
     /// <param name="steps">The sequence of tile steps.</param>
     /// <returns>A coroutine for every step.</returns>
-    protected IEnumerator SequenceOfMoves(List<Tile> steps)
+    private IEnumerator SequenceOfMoves(List<Tile> steps)
     {
         moving = true;
         currentTile.CurrentUnit = null;
@@ -134,7 +124,7 @@ public abstract class Unit : MonoBehaviour
     /// </summary>
     /// <param name="destinationTile">The destination tile.</param>
     /// <returns>null</returns>
-    protected IEnumerator SmoothMovement(Tile destinationTile)
+    private IEnumerator SmoothMovement(Tile destinationTile)
     {
         float sqrRemainingDistance = (transform.position - destinationTile.Position).sqrMagnitude;
         while (sqrRemainingDistance > float.Epsilon)
@@ -149,32 +139,12 @@ public abstract class Unit : MonoBehaviour
         transform.position = currentTile.Position; //snap the position just in case the unit is slightly off
     }
 
-    protected virtual void Update()
-    {
-        //The basic behavior for non-player units is to draw move squares upon selection, and erase them otherwise
-        Vector3 position = _GameManager.instance.cursorPosition;
-        if (Input.GetButtonDown("confirm"))
-        {
-            if (Mathf.Abs(transform.position.x - position.x) < .5 && Mathf.Abs(transform.position.y - position.y) < .5)
-            {
-                DrawMoveSquares();
-            }
-            else
-            {
-                EraseMoveSquares();
-            }
-        }
-    }
-
     /// <summary>
-    /// Draws all the move squares, assumes the squares are erased first.
+    /// Generates the move spaces.
     /// </summary>
-    protected virtual void DrawMoveSquares()
+    public Dictionary<Tile, ActionSpace> GenerateMoveSpaces()
     {
-        if (moveSpaces.Count > 0)
-        {
-            return;
-        }
+        Dictionary<Tile, ActionSpace> spaces = new Dictionary<Tile, ActionSpace>();
 
         moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius); //add checks for if this changes between drawing squares and metamove
 
@@ -182,54 +152,60 @@ public abstract class Unit : MonoBehaviour
         {
             Vector3 position = pair.Key.Position;
             ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
-            moveSpaceScript.currentTile = pair.Key;
-            moveSpaces[pair.Key] = moveSpaceScript;
+            moveSpaceScript.parentUnit = this;
+            moveSpaceScript.currentTile = currentTile;
+            moveSpaceScript.action = Action.Move;
+            spaces[pair.Key] = moveSpaceScript;
         }
 
+        actionSpaces = spaces;
+        return spaces;
+    }
+
+    public Dictionary<Tile, ActionSpace> GenerateActSpaces()
+    {
+        Dictionary<Tile, ActionSpace> spaces = new Dictionary<Tile, ActionSpace>();
+
+        actionSpaces = spaces;
+        return spaces;
     }
 
     //Erases the move squares around the unit
-    protected void EraseMoveSquares()
+    public void EraseSpaces()
     {
-        foreach (KeyValuePair<Tile,ActionSpace> pair in moveSpaces)
+        foreach (KeyValuePair<Tile,ActionSpace> pair in actionSpaces)
         {
-            Destroy(pair.Value.gameObject);
+            pair.Value.Delete();
         }
-        moveSpaces.Clear();
+        actionSpaces.Clear();
     }
 
-    protected virtual void StartActPhase()
+    public void StartActPhase()
     {
         acting = true;
-        EraseMoveSquares();
-        DrawActSquares();
+        EraseSpaces();
+        GenerateActSpaces();
         //pop up the menu of actions, have the player select one, unless they are an npc
         //npcs should automatically select an action
     }
 
-    protected virtual void EndActPhase()
+    public void EndActPhase()
     {
-        EraseActSquares();
+        EraseSpaces();
         acting = false;
         acted = true;
     }
 
-    protected virtual void DrawActSquares()
-    {
-
-    }
-
-    protected void EraseActSquares()
-    {
-        foreach (var i in actSpaces)
-        {
-            Destroy(i.gameObject);
-        }
-        actSpaces = new List<ActionSpace>();
-    }
-
-    protected void TakeDamage()
+    private void TakeDamage()
     {
         animator.SetTrigger("playerHit");
+    }
+
+    public void ParseAction(ActionSpace space)
+    {
+        if (space.action == Action.Move)
+        {
+            MetaMove(space.currentTile);
+        }
     }
 }

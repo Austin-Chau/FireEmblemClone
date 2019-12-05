@@ -5,63 +5,99 @@ using UnityEngine;
 public class Cursor : MonoBehaviour
 {
     private _GameManager gameManager;
-    private Vector2 position = new Vector2(0,0);
+
     public float moveTime = 0.1f;
     private float inverseMoveTime;
+
     private bool moving;
+
+    private Tile currentTile;
+
+    private Dictionary<Tile, ActionSpace> actionSpaces;
 
     private void Start()
     {
         inverseMoveTime = 1 / moveTime;
         gameManager = _GameManager.instance;
+        gameManager.Cursor = this;
+        currentTile = gameManager.board.Tiles[0, 0]; //whatever initial position
+        transform.position = currentTile.Position; //snap to that tile
     }
 
     // Update is called once per frame
     void Update()
     {
-        position.x = Mathf.Floor(transform.position.x);
-        position.y = Mathf.Floor(transform.position.y);
         if (!moving)
         {
             float x = Input.GetAxisRaw("Horizontal") * Time.deltaTime;
             float y = Input.GetAxisRaw("Vertical") * Time.deltaTime;
             if (Mathf.Abs(x) > Mathf.Epsilon || Mathf.Abs(y) > Mathf.Epsilon)
             {
-                if (Mathf.Abs(x) < Mathf.Epsilon)
+                AdjacentDirection horizontal;
+                AdjacentDirection vertical;
+                if (Mathf.Abs(x) <= Mathf.Epsilon)
                 {
-                    x = 0;
+                    horizontal = AdjacentDirection.None;
+                }
+                else if (x > 0)
+                {
+                    horizontal = AdjacentDirection.Right;
                 }
                 else
                 {
-                    x = x < 0 ? -1 : 1;
+                    horizontal = AdjacentDirection.Left;
                 }
-
-                if (Mathf.Abs(y) < Mathf.Epsilon)
+                if (Mathf.Abs(y) <= Mathf.Epsilon)
                 {
-                    y = 0;
+                    vertical = AdjacentDirection.None;
+                }
+                else if (y > 0)
+                {
+                    vertical = AdjacentDirection.Up;
                 }
                 else
                 {
-                    y = y < 0 ? -1 : 1;
+                    vertical = AdjacentDirection.Down;
                 }
 
-                StartCoroutine(SmoothMovement(transform.position + new Vector3(x,y, 0)));
+                StartCoroutine(SmoothMovement(currentTile.GetAdjacentTile(horizontal).GetAdjacentTile(vertical))); //Traverse horizontally, then vertically
+            }
+            else if (Input.GetButtonDown("confirm"))
+            {
+                //Behavior: priotize any actionspace on the tile over the unit on the tile, and if the unit can't do anything, then perform any move actionspace
+                if (actionSpaces[currentTile] != null && actionSpaces[currentTile].action != Action.Move)
+                {
+                    actionSpaces[currentTile].parentUnit.ParseAction(actionSpaces[currentTile]);
+                    actionSpaces.Clear();
+                }
+                if (currentTile.CurrentUnit != null && !currentTile.CurrentUnit.moved)
+                {
+                    actionSpaces = currentTile.CurrentUnit.GenerateMoveSpaces();
+                }
+                if (actionSpaces[currentTile] != null && actionSpaces[currentTile].action == Action.Move)
+                {
+                    actionSpaces[currentTile].parentUnit.ParseAction(actionSpaces[currentTile]);
+                    actionSpaces.Clear();
+                }
             }
         }
         gameManager.cursorPosition = transform.position;
     }
 
-    IEnumerator SmoothMovement(Vector3 end)
+    private IEnumerator SmoothMovement(Tile destinationTile)
     {
         moving = true;
-        float sqrRemainingDistance = (transform.position - end).sqrMagnitude;
+        float sqrRemainingDistance = (transform.position - destinationTile.Position).sqrMagnitude;
         while (sqrRemainingDistance > float.Epsilon)
         {
-            Vector3 newPosition = Vector3.MoveTowards(transform.position, end, inverseMoveTime * Time.deltaTime);
-            transform.SetPositionAndRotation(newPosition, Quaternion.identity);
-            sqrRemainingDistance = (transform.position - end).sqrMagnitude;
+            Vector3 newPosition = Vector3.MoveTowards(transform.position, destinationTile.Position, inverseMoveTime * Time.deltaTime);
+            //rb2D.MovePosition(newPosition); (we might want rigid body for smooth movement)
+            transform.position = newPosition;
+            sqrRemainingDistance = (transform.position - destinationTile.Position).sqrMagnitude;
             yield return null;
         }
+        currentTile = destinationTile;
+        transform.position = currentTile.Position; //snap the position just in case the unit is slightly off
         moving = false;
     }
 }

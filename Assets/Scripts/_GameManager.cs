@@ -10,6 +10,7 @@ public class _GameManager : MonoBehaviour
     public _BoardManager boardScript;
 
     public Board board;
+    public Cursor Cursor;
 
     //Various bools used by the manager to make sure states are transitioned properly
     public bool playersTurn = true;

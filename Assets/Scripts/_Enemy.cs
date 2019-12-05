@@ -2,29 +2,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Enemy : Unit
+public class Enemy
 {
-    protected override void Start()
+    public List<Unit> childUnit;
+    public void AddUnit(Tile spawnTile, Unit babyBoy)
     {
-        base.Start();
-        team = "enemy";
-        _GameManager.instance.AddEnemyToList(this);
-    }
-    // Update is called once per frame
-    protected override void Update()
-    {
-        base.Update();
+        babyBoy.CreateUnit(spawnTile, Team.Enemy);
+        childUnit.Add(babyBoy);
     }
 
-    protected override void StartActPhase()
+    public void PerformTurn()
     {
-        base.StartActPhase();
-        //pop up the menu of actions, have the player select one, unless they are an npc
-        //npcs should automatically select an action
-        EndActPhase();
-    }
 
+    }
     //Called by the gameManager to tell this guy to move, get closer to the player
+    /*
     public void Move()
     {
         Vector2 playerPosition = _GameManager.instance.playerPosition;
@@ -44,4 +36,5 @@ public class Enemy : Unit
         Vector3 end = new Vector3(x, y, 0);
         MetaMove(end);
     }
+    */
 }
