@@ -64,24 +64,6 @@ public class _Player : Unit
         }
     }
 
-    //like the unit's drawmovesquares, but adds extra scripting capabilities since these squares are interactable
-    protected override void DrawMoveSquares()
-    {
-        moveSpaces = new List<ActionSpace>();
-        for (int i = -moveRadius; i <= moveRadius; i++)
-        {
-            for (int j = -(moveRadius - Mathf.Abs(i)); j <= moveRadius - Mathf.Abs(i); j++)
-            {
-                Vector3 end = new Vector3(transform.position.x, transform.position.y, 0) + new Vector3(i, j, 0);
-                ActionSpace moveSpaceScript = Instantiate(MoveSpace, end, Quaternion.identity).GetComponent<ActionSpace>();
-                moveSpaces.Add(moveSpaceScript);
-                moveSpaceScript.collidersIndex = moveSpaces.Count - 1;
-                moveSpaceScript.unitScript = this;
-                moveSpaceScript.action = "move";
-            }
-        }
-    }
-
     protected override void StartActPhase()
     {
         base.StartActPhase();
@@ -89,28 +71,4 @@ public class _Player : Unit
         //npcs should automatically select an action
     }
 
-    //runs a collision check on all nearby tiles to see if there is anything actionable
-    //later, implement layers for each action (heal, attack, etc)
-    protected override void DrawActSquares()
-    {
-        actSpaces = new List<ActionSpace>();
-        for (int i = -actRadius; i <= actRadius; i++)
-        {
-            for (int j = -(actRadius - Mathf.Abs(i)); j <= actRadius - Mathf.Abs(i); j++)
-            {
-                Vector2 end = new Vector2(transform.position.x, transform.position.y) + new Vector2(i, j);
-                boxCollider.enabled = false;
-                RaycastHit2D hit = Physics2D.Linecast(end + new Vector2(0.1f, 0),end,actingLayer);
-                boxCollider.enabled = true;
-                if (hit.transform != null)
-                {
-                    ActionSpace actSpaceScript = Instantiate(ActSpace, end, Quaternion.identity).GetComponent<ActionSpace>();
-                    actSpaces.Add(actSpaceScript);
-                    actSpaceScript.collidersIndex = actSpaces.Count - 1;
-                    actSpaceScript.unitScript = this;
-                    actSpaceScript.action = "act";
-                }
-            }
-        }
-    }
 }

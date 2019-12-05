@@ -61,6 +61,18 @@ public static class Pathfinding
         return tileDistances;
     }
 
+    public static AdjacentDirection GetAdjacentTilesDirection(Tile startTile, Tile endTile)
+    {
+        foreach (KeyValuePair<AdjacentDirection, Tile> pair in startTile.GetAdjacentTilesDictionary())
+        {
+            if (pair.Value == endTile)
+            {
+                return pair.Key;
+            }
+        }
+        return AdjacentDirection.None;
+    }
+
     /// <summary>
     /// FloodFill Algorithm for finding distances from a point of origin
     /// </summary>

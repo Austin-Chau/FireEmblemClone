@@ -23,6 +23,7 @@ public class Tile
         type = _type;
         CreateTile();
         tileObject.transform.position = pos;
+        Position = pos;
         tileObject.transform.parent = parent;
         tileScript = tileObject.GetComponent<TileScript>();
         if (_type == TileType.Ground) MovementWeight = 1;
@@ -39,16 +40,39 @@ public class Tile
         {
             return occupied;
         }
-        set
+        private set
         {
             occupied = value;
             tileScript.Occupied = value;
         }
     }
-
+    /// <summary>
+    /// Assign a unit that is sitting on this tile. Automatically sets the Occupied flag.
+    /// </summary>
+    public Unit CurrentUnit
+    {
+        get
+        {
+            return currentUnit;
+        }
+        set
+        {
+            currentUnit = value;
+            if (value == null)
+            {
+                Occupied = false;
+            }
+            else
+            {
+                Occupied = true;
+            }
+        }
+    }
     public int MovementWeight;
+    public Vector3 Position { get; private set; }
 
     public TileType type { get; private set; }
+
     #endregion
 
     #region Private Variables
@@ -56,14 +80,15 @@ public class Tile
 
     GameObject tileObject;
 
-    //Four adjacent tiles based on cardinal directions for pathfinding
-    Dictionary<AdjacentDirection, Tile> AdjacentTiles = new Dictionary<AdjacentDirection, Tile>();
-
     //Amount of movement it takes to get to the tile
     //MAX_INT if impassable.
 
     private TileScript tileScript;
     private bool occupied;
+    private Unit currentUnit;
+
+    //Four adjacent tiles based on cardinal directions for pathfinding
+    private Dictionary<AdjacentDirection, Tile> AdjacentTiles = new Dictionary<AdjacentDirection, Tile>()
 
     #region Constants
 
@@ -106,6 +131,11 @@ public class Tile
         }
 
         return tiles;
+    }
+
+    public Dictionary<AdjacentDirection,Tile> GetAdjacentTilesDictionary()
+    {
+        return AdjacentTiles;
     }
 
     public void AddAdjacentTile(AdjacentDirection dir, Tile tile)

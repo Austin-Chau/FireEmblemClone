@@ -95,44 +95,10 @@ public class Starting : IUnitState
     }
 }
 
-public class MovedButNotActed : IUnitState
+public class Acting : IUnitState
 {
     Unit parent;
-    public MovedButNotActed(Unit parent) { this.parent = parent; }
-    public void Enter()
-    {
-
-    }
-    public void Update()
-    {
-
-    }
-    public void Exit()
-    {
-
-    }
-    public void CursorHover()
-    {
-
-    }
-    public void CursorHoverUpdate()
-    {
-
-    }
-    public void CursorHoverExit()
-    {
-
-    }
-    public void CursorSelect()
-    {
-
-    }
-}
-
-public class ActedButNotMoved : IUnitState
-{
-    Unit parent;
-    public ActedButNotMoved(Unit parent) { this.parent = parent; }
+    public Acting(Unit parent) { this.parent = parent; }
     public void Enter()
     {
 

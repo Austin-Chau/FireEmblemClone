@@ -8,6 +8,8 @@ public class ActionSpace : MonoBehaviour
     public Unit unitScript;
     public string action;
 
+    public Tile currentTile;
+
     // Update is called once per frame
     void Update()
     {

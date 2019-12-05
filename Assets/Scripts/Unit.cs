@@ -39,7 +39,14 @@ public abstract class Unit : MonoBehaviour
     protected bool selected = false;
 
     protected List<ActionSpace> actSpaces = new List<ActionSpace>();
-    protected List<ActionSpace> moveSpaces = new List<ActionSpace>();
+    protected Dictionary<Tile, ActionSpace> moveSpaces = new Dictionary<Tile, ActionSpace>();
+
+    #endregion
+
+    #region Private variables
+
+    private Tile currentTile;
+    private Dictionary<Tile, int> moveTree;
 
     #endregion
 
@@ -53,79 +60,93 @@ public abstract class Unit : MonoBehaviour
         inverseMoveTime = 1f / moveTime;
 
         //Tentative
-        _GameManager.instance.board.Tiles[(int)coordinates.x, (int)coordinates.y].Occupied = true;
+        currentTile = _GameManager.instance.board.Tiles[(int)coordinates.x, (int)coordinates.y];
+        currentTile.CurrentUnit = this;
     }
 
     /// <summary>
-    /// Moves a unit to the given position, using the unit's pathfinding parameters.
+    /// Gets the path of the unit using the starting and destination tile, then collapses it down into just the vertices.
     /// </summary>
-    /// <param name="position">The final position.</param>
-    public virtual void MetaMove (Vector3 position)
+    /// <param name="destinationTile">The destination tile.</param>
+    public virtual void MetaMove(Tile destinationTile)
     {
-        int x = (int)Mathf.Round(position.x);
-        int y = (int)Mathf.Round(position.y);
 
-        Stack<Vector2> steps = Pathfinding.GenerateSteps(coordinates, new Vector2(x,y));
+        Stack<Tile> steps = Pathfinding.GenerateSteps(currentTile, destinationTile, moveTree);
 
         //Now, given a list of unit vectors, 
         //combine consecutive vectors in the same direction to create smooth movements.
-        List<Vector2> collapsedSteps = new List<Vector2>();
+        List<Tile> stepsVertices = new List<Tile>();
         if (steps.Count != 0)
         {
-            Vector2 accumulateVector = steps.Pop();
+            Tile startingTile = steps.Pop();
+            Tile firstTile = steps.Pop();
+            Tile secondTile;
+            AdjacentDirection baseDirection = Pathfinding.GetAdjacentTilesDirection(startingTile, firstTile); //this is the direction we check further directions against
+
             if (steps.Count > 0)
             {
-                while (steps.Count > 0)
+                //There is more than one tile in the path, the unit is actually moving
+                do
                 {
-                    Vector2 tempVector = steps.Pop();
-                    if (Vector2.Angle(accumulateVector, tempVector) < Mathf.Epsilon)
+                    secondTile = steps.Pop();
+                    AdjacentDirection newDirection = Pathfinding.GetAdjacentTilesDirection(firstTile, secondTile);
+
+                    if (newDirection != baseDirection)
                     {
-                        accumulateVector = accumulateVector + tempVector;
+                        //If this nextTile bends out of the way, the middleTile is a vertex
+                        stepsVertices.Add(firstTile);
+                        baseDirection = newDirection; //the new bent direction is now what we compare to
                     }
-                    else
-                    {
-                        collapsedSteps.Add(accumulateVector);
-                        accumulateVector = tempVector;
-                    }
+                    //Now, step along, the newest tile becomes the first tile
+                    firstTile = secondTile;
                 }
-                collapsedSteps.Add(accumulateVector);
-            }
-            else
-            {
-                collapsedSteps.Add(accumulateVector);
+                while (steps.Count > 0);
+
+                stepsVertices.Add(secondTile);
             }
         }
 
-        StartCoroutine(SequenceOfMoves(collapsedSteps));
+        StartCoroutine(SequenceOfMoves(stepsVertices));
 
     }
 
-    //An enumerator for the steps of the movement, moves the player according to each vector
-    protected IEnumerator SequenceOfMoves (List<Vector2> steps) 
+    /// <summary>
+    /// The steps can be any list of tiles, the unit will move to each of them in turn.
+    /// </summary>
+    /// <param name="steps">The sequence of tile steps.</param>
+    /// <returns>A coroutine for every step.</returns>
+    protected IEnumerator SequenceOfMoves(List<Tile> steps)
     {
         moving = true;
-        _GameManager.instance.board.Tiles[(int)coordinates.x, (int)coordinates.y].Occupied = false;
-        foreach (var step in steps) {
-            yield return StartCoroutine(SmoothMovement(new Vector3(coordinates.x+step.x,coordinates.y+step.y,0)));
+        currentTile.CurrentUnit = null;
+        foreach (Tile step in steps)
+        {
+            yield return StartCoroutine(SmoothMovement(step));
         }
         moving = false;
         moved = true;
-        _GameManager.instance.board.Tiles[(int)coordinates.x, (int)coordinates.y].Occupied = true;
+        currentTile.CurrentUnit = this;
         StartActPhase();
     }
 
-    //Moves the object smoothly to the end point 
-    protected IEnumerator SmoothMovement (Vector3 end)
+    /// <summary>
+    /// Smooth movement to a single given tile, spread over multiple frames. Also sets the currentTile.
+    /// </summary>
+    /// <param name="destinationTile">The destination tile.</param>
+    /// <returns>null</returns>
+    protected IEnumerator SmoothMovement(Tile destinationTile)
     {
-        float sqrRemainingDistance = (transform.position - end).sqrMagnitude;
+        float sqrRemainingDistance = (transform.position - destinationTile.Position).sqrMagnitude;
         while (sqrRemainingDistance > float.Epsilon)
         {
-            Vector3 newPosition = Vector3.MoveTowards(rb2D.position, end, inverseMoveTime * Time.deltaTime);
-            rb2D.MovePosition(newPosition);
-            sqrRemainingDistance = (transform.position - end).sqrMagnitude;
-            coordinates.Set(Mathf.Floor(transform.position.x), Mathf.Floor(transform.position.y));
+            Vector3 newPosition = Vector3.MoveTowards(transform.position, destinationTile.Position, inverseMoveTime * Time.deltaTime);
+            //rb2D.MovePosition(newPosition); (we might want rigid body for smooth movement)
+            transform.position = newPosition;
+            sqrRemainingDistance = (transform.position - destinationTile.Position).sqrMagnitude;
             yield return null;
         }
+        currentTile = destinationTile;
+        transform.position = currentTile.Position; //snap the position just in case the unit is slightly off
     }
 
     protected virtual void Update()
@@ -145,31 +166,36 @@ public abstract class Unit : MonoBehaviour
         }
     }
 
-    //Draws the move squares all around the unit and prepares that unit for movement
+    /// <summary>
+    /// Draws all the move squares, assumes the squares are erased first.
+    /// </summary>
     protected virtual void DrawMoveSquares()
     {
         if (moveSpaces.Count > 0)
         {
             return;
         }
-        List<Vector2> movePositions = Pathfinding.GenerateMoveTree(coordinates,moveRadius);
 
-        moveSpaces = new List<ActionSpace>();
-        foreach (Vector2 position in movePositions)
+        moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius); //add checks for if this changes between drawing squares and metamove
+
+        foreach (KeyValuePair<Tile,int> pair in moveTree)
         {
+            Vector3 position = pair.Key.Position;
             ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
-            moveSpaces.Add(moveSpaceScript);
+            moveSpaceScript.currentTile = pair.Key;
+            moveSpaces[pair.Key] = moveSpaceScript;
         }
+
     }
 
     //Erases the move squares around the unit
     protected void EraseMoveSquares()
     {
-        foreach (var i in moveSpaces)
+        foreach (KeyValuePair<Tile,ActionSpace> pair in moveSpaces)
         {
-            Destroy(i.gameObject);
+            Destroy(pair.Value.gameObject);
         }
-        moveSpaces = new List<ActionSpace>();
+        moveSpaces.Clear();
     }
 
     protected virtual void StartActPhase()

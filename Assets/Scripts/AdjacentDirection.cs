@@ -7,5 +7,6 @@ public enum AdjacentDirection
     Up,
     Right,
     Down,
-    Left
+    Left,
+    None
 }
