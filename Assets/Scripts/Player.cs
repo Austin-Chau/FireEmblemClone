@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Player
+public class Player : Controller
 {
-    public List<Unit> childUnit;
-    public void AddUnit(Tile spawnTile, Unit babyBoy)
+    public Player(Team _team) : base(_team)
     {
-        babyBoy.CreateUnit(spawnTile, Team.Enemy);
-        childUnit.Add(babyBoy);
+
     }
 }

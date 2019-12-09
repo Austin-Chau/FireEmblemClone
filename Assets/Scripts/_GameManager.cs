@@ -26,6 +26,8 @@ public class _GameManager : MonoBehaviour
     private bool doingSetup = true;
     private List<Enemy> enemies;
 
+    private Player playerController;
+    private List<Enemy> enemyController;
 
     //Preinitialization stuff
     void Awake()
@@ -45,16 +47,10 @@ public class _GameManager : MonoBehaviour
         InitGame();
     }
 
-    public void AddEnemyToList(Enemy enemy)
-    {
-        enemies.Add(enemy);
-    }
-
     //Actually setting up the level. Can be called multiple times, after clearing the level.
     void InitGame()
     {
         doingSetup = true;
-        enemies.Clear();
         board = boardScript.SetupScene();
         doingSetup = false;
     }

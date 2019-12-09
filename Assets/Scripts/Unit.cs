@@ -21,11 +21,14 @@ public class Unit : MonoBehaviour
 
     public int actRadius = 1;
     public int moveRadius = 3;
+
+    public Tile currentTile { get; private set; }
     #endregion
 
     #region Private variables
 
     private Team team;
+    private Controller controller;
 
     private Animator animator;
     private Rigidbody2D rb2D;
@@ -33,7 +36,6 @@ public class Unit : MonoBehaviour
     private float inverseMoveTime;
 
     private Dictionary<Tile, ActionSpace> actionSpaces = new Dictionary<Tile, ActionSpace>();
-    private Tile currentTile;
 
     private Dictionary<Tile, int> moveTree;
 
@@ -46,10 +48,18 @@ public class Unit : MonoBehaviour
         inverseMoveTime = 1f / moveTime;
     }
 
-    public void CreateUnit(Tile spawnTile, Team _team)
+    /// <summary>
+    /// Sets all of the passed parameters while also moving the unit to the position of its tile.
+    /// </summary>
+    /// <param name="_spawnTile">The tile the unit should be on.</param>
+    /// <param name="_team">What team the unit is on.</param>
+    /// <param name="_controller">The controller that controls this unit.</param>
+    public void InitializeUnit(Tile _spawnTile, Team _team, Controller _controller)
     {
         team = _team;
-        currentTile = spawnTile;
+        controller = _controller;
+        currentTile = _spawnTile;
+        transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
     }
 
@@ -116,7 +126,7 @@ public class Unit : MonoBehaviour
         moving = false;
         moved = true;
         currentTile.CurrentUnit = this;
-        StartActPhase();
+        controller.StepTurn();
     }
 
     /// <summary>

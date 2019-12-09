@@ -2,20 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Enemy
+public class Enemy : Controller
 {
-    public List<Unit> childUnit;
-    public void AddUnit(Tile spawnTile, Unit babyBoy)
+    public Enemy (Team _team, ControllerBehavior _behavior) : base(_team)
     {
-        babyBoy.CreateUnit(spawnTile, Team.Enemy);
-        childUnit.Add(babyBoy);
+        behavior = _behavior;
     }
 
-    public void PerformTurn()
-    {
-
-    }
-    //Called by the gameManager to tell this guy to move, get closer to the player
+    //For reference
     /*
     public void Move()
     {
