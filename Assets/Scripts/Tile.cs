@@ -27,7 +27,7 @@ public class Tile
         tileObject.transform.parent = parent;
         tileScript = tileObject.GetComponent<TileScript>();
         if (_type == TileType.Ground) MovementWeight = 1;
-        else MovementWeight = int.MaxValue;
+        else MovementWeight = 100;
     }
 
     #region Public Variables
@@ -112,10 +112,6 @@ public class Tile
     /// <returns>Adjacent Tile, or null if it does not exist (meaning tile is a border tile.)</returns>
     public Tile GetAdjacentTile(AdjacentDirection dir)
     {
-        if (dir == AdjacentDirection.None)
-        {
-            return this; //don't tell chau
-        }
         if (AdjacentTiles.ContainsKey(dir))
             return AdjacentTiles[dir];
         else

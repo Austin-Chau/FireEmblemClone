@@ -19,7 +19,6 @@ public static class Pathfinding
         Tile lowestTile;
         int lowestValue;
         List<Tile> tilesToCheck = new List<Tile>();
-
         steps.Push(currentTile);
 
         while (steps.Peek() != InitialTile) {
@@ -30,7 +29,7 @@ public static class Pathfinding
 
             foreach(Tile tile in tilesToCheck)
             {
-                if(tileDistances[tile] < lowestValue)
+                if(tileDistances.ContainsKey(tile) && tileDistances[tile] < lowestValue)
                 {
                     lowestValue = tileDistances[tile];
                     lowestTile = tile;
@@ -56,7 +55,14 @@ public static class Pathfinding
 
         tileDistances[unitTile] = 0;
 
-        FloodFill(moveCounter, moveRadius, unitTile, tileDistances);
+        FloodFill(moveCounter, moveRadius,
+                unitTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
+        FloodFill(moveCounter, moveRadius,
+                unitTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances);
+        FloodFill(moveCounter, moveRadius,
+                unitTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances);
+        FloodFill(moveCounter, moveRadius,
+                unitTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances);
         
         return tileDistances;
     }
@@ -82,10 +88,24 @@ public static class Pathfinding
     /// <param name="tileDistances">A dictionary of tiles with their distances</param>
     private static void FloodFill(int count, int moveRadius, Tile currentTile, Dictionary<Tile, int> tileDistances)
     {
+        if (currentTile == null)
+        {
+            return;
+        }
         int distanceFromOrigin = currentTile.MovementWeight + count;
+        //Debug.Log(distanceFromOrigin);
         //If going to the tile would go over the moveRadius, don't add to the list
-        if (distanceFromOrigin > moveRadius) return;
-        if (tileDistances.ContainsKey(currentTile)) return;
+        if (distanceFromOrigin > moveRadius)
+        {
+            //Debug.Log("farther than the origin");
+            return;
+        }
+        if (tileDistances.ContainsKey(currentTile))
+        {
+            //Debug.Log("already have that tile");
+            //Replace if the distance is lower?
+            return;
+        }
 
         //Otherwise, add to the list and check the adjacent tiles
         tileDistances[currentTile] = distanceFromOrigin;

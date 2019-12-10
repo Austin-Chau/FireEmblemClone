@@ -4,30 +4,29 @@ using UnityEngine;
 
 public class _GameManager : MonoBehaviour
 {
-    //a place to store the singular game manager, can be checked against so a competing one is not instanced
-    public static _GameManager instance = null;
-
-    public _BoardManager boardScript;
-
-    public Board board;
+    #region Public Variables
+    public static _GameManager instance;
+    public _BoardManager BoardScript;
+    public GameObject Unit;
+    public Board Board;
     public Cursor Cursor;
+    public Vector3 cursorPosition = new Vector3(0, 0, 0);
+    public List<Controller> Controllers { get; private set; }
+    public Controller PlayerController;
+    public Controller EnemyController;
 
-    //Various bools used by the manager to make sure states are transitioned properly
-    public bool playersTurn = true;
-    public bool moving = false;
-    public Vector2 playerPosition = new Vector2(0, 0);
-    public Vector3 cursorPosition = new Vector3(0,0,0);
+    public Controller CurrentController { get; private set; }
 
-    public bool panCamera = true;
+    #endregion
 
-    //How long between each NPC movement
-    public float turnDelay = .1f;
-
+    #region Private Variables
+    private int controllerIndex = 0;
     private bool doingSetup = true;
-    private List<Enemy> enemies;
+    #endregion
 
-    private Player playerController;
-    private List<Enemy> enemyController;
+    #region Constants
+    const int enemyCount = 2;
+    #endregion
 
     //Preinitialization stuff
     void Awake()
@@ -41,59 +40,51 @@ public class _GameManager : MonoBehaviour
             Destroy(gameObject);
         }
         DontDestroyOnLoad(gameObject);
-
-        enemies = new List<Enemy>();
-        boardScript = GetComponent<_BoardManager>();
+        BoardScript = GetComponent<_BoardManager>();
+        Controllers = new List<Controller>();
         InitGame();
     }
 
-    //Actually setting up the level. Can be called multiple times, after clearing the level.
+    /// <summary>
+    /// Initializes the game, currently only creates the board.
+    /// </summary>
     void InitGame()
     {
         doingSetup = true;
-        board = boardScript.SetupScene();
+
+        Board = BoardScript.SetupScene(EnemyController);
+        PlayerController = new Controller(Team.Player, new PlayerBehavior());
+        PlayerController.SpawnAndAddUnit(Board.Tiles[0, 0], Instantiate(Unit,new Vector3(0,0,0),Quaternion.identity).GetComponent<Unit>());
+        Controllers.Add(PlayerController);
+
+        EnemyController = new Controller(Team.Enemy, new BasicEnemy());
+        for (int i = 0; i < enemyCount; i++)
+        {
+            Tile randomTile = BoardScript.GetRandomUnoccupiedTile();
+            GameObject unit = Instantiate(Unit, randomTile.Position, Quaternion.identity);
+            EnemyController.SpawnAndAddUnit(randomTile, unit.GetComponent<Unit>());
+        }
+        Controllers.Add(EnemyController);
+
+        CurrentController = PlayerController;
+        CurrentController.PerformTurn();
+
         doingSetup = false;
     }
 
-    public void GameOver()
+    public void PassTurn()
     {
-        //for when the player dies or otherwise the game ends
+        Debug.Log("passing turn -------------");
+        Debug.Log(controllerIndex);
+        controllerIndex++;
+        if (controllerIndex >= Controllers.Count)
+        {
+            controllerIndex = 0;
+        }
+        Debug.Log(controllerIndex);
+        CurrentController = Controllers[controllerIndex];
+        Debug.Log(CurrentController.Team);
+        CurrentController.PerformTurn();
     }
 
-    void Update()
-    {
-        //game manager twiddles its thumbs while enemies are not supposed to move
-        if (playersTurn || doingSetup || moving)
-        {
-            return;
-        }
-        StartCoroutine(MoveEnemies());
-    }
-
-    //enemies move one by one
-    IEnumerator MoveEnemies()
-    {
-        moving = true;
-        yield return new WaitForSeconds(turnDelay);
-        if (enemies.Count == 0)
-        {
-            yield return new WaitForSeconds(turnDelay);
-        }
-        else
-        {
-            for (int i = 0; i < enemies.Count; i++)
-            {
-                enemies[i].Move();
-                while (enemies[i].moving)
-                {
-                    yield return null;
-                }
-                enemies[i].acted = false;
-                enemies[i].moved = false;
-                yield return new WaitForSeconds(turnDelay);
-            }
-        }
-        moving = false;
-        playersTurn = true;
-    }
 }

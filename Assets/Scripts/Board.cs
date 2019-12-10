@@ -12,6 +12,7 @@ public class Board
     public Vector2[,] Positions { get; private set; }
     public int columns { get; private set; }
     public int rows { get; private set; }
+    //public List<GameObject> SpawnedEnemyUnits;
     #endregion
 
     #region Constants
@@ -60,9 +61,9 @@ public class Board
     /// <returns>True if pass, false otherwise</returns>
     public bool IsTileOccupied(int x, int y)
     {
-        Debug.Log(x + ", " + y);
-        Debug.Log(!Tiles[x, y].Occupied);
-        Debug.Log(Tiles[x, y].type == TileType.Ground);
+        //Debug.Log(x + ", " + y);
+        //Debug.Log(!Tiles[x, y].Occupied);
+        //Debug.Log(Tiles[x, y].type == TileType.Ground);
         if (Tiles[x, y].Occupied || Tiles[x, y].type == TileType.Wall)
             return true;
         else
@@ -78,17 +79,25 @@ public class Board
         TileType tileType;
         for(int i = 0; i < rows; i++)
         {
-            for(int j = 0; j < columns; j++)
+            for (int j = 0; j < columns; j++)
             {
                 Positions[i, j] = new Vector2(i, j);
                 tileType = Random.value > .2f ? TileType.Ground : TileType.Wall;
                 Tiles[i, j] = new Tile(Positions[i, j],
                     tileType,
                     tileType == TileType.Ground ? FloorsParent : WallsParent);
+                if (i > 0)
+                {
+                    Tiles[i - 1, j].AddAdjacentTile(AdjacentDirection.Right, Tiles[i, j]);
+                    Tiles[i, j].AddAdjacentTile(AdjacentDirection.Left, Tiles[i - 1, j]);
+                }
+                if (j > 0)
+                {
+                    Tiles[i, j].AddAdjacentTile(AdjacentDirection.Down, Tiles[i, j - 1]);
+                    Tiles[i, j - 1].AddAdjacentTile(AdjacentDirection.Up, Tiles[i, j]);
+                }
+                Tiles[i, j].AddAdjacentTile(AdjacentDirection.None, Tiles[i, j]);
             }
         }
     }
-
-    
-
 }

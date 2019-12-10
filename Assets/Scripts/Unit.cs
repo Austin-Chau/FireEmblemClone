@@ -23,12 +23,13 @@ public class Unit : MonoBehaviour
     public int moveRadius = 3;
 
     public Tile currentTile { get; private set; }
+    public Tile pastTile { get; private set; }
+
+    public Team team { get; private set; }
+    public Controller controller { get; private set; }
     #endregion
 
     #region Private variables
-
-    private Team team;
-    private Controller controller;
 
     private Animator animator;
     private Rigidbody2D rb2D;
@@ -61,21 +62,46 @@ public class Unit : MonoBehaviour
         currentTile = _spawnTile;
         transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
+        ResetStates();
+    }
+    /// <summary>
+    /// Initializes the various state checking variables of this unit.
+    /// </summary>
+    public void ResetStates()
+    {
+        moving = false;
+        moved = false;
+        acting = false;
+        acted = false;
+        EraseSpaces();
+    }
+    /// <summary>
+    /// Teleports a unit to a certain tile. Warning: erases pastTile information, this is meant as an absolute movement.
+    /// </summary>
+    /// <param name="destinationTile"></param>
+    public virtual void Teleport(Tile destinationTile)
+    {
+        currentTile.CurrentUnit = null;
+        currentTile = destinationTile;
+        transform.position = currentTile.Position;
+        currentTile.CurrentUnit = this;
+        pastTile = currentTile;
     }
 
+    
     /// <summary>
     /// Gets the path of the unit using the starting and destination tile, then collapses it down into just the vertices.
     /// </summary>
     /// <param name="destinationTile">The destination tile.</param>
     public virtual void MetaMove(Tile destinationTile)
     {
-
+        moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
         Stack<Tile> steps = Pathfinding.GenerateSteps(currentTile, destinationTile, moveTree);
 
         //Now, given a list of unit vectors, 
         //combine consecutive vectors in the same direction to create smooth movements.
         List<Tile> stepsVertices = new List<Tile>();
-        if (steps.Count != 0)
+        if (steps.Count > 1)
         {
             Tile startingTile = steps.Pop();
             Tile firstTile = steps.Pop();
@@ -105,6 +131,10 @@ public class Unit : MonoBehaviour
                 stepsVertices.Add(secondTile);
             }
         }
+        else
+        {
+            stepsVertices.Add(steps.Pop());
+        }
 
         StartCoroutine(SequenceOfMoves(stepsVertices));
 
@@ -118,6 +148,7 @@ public class Unit : MonoBehaviour
     private IEnumerator SequenceOfMoves(List<Tile> steps)
     {
         moving = true;
+        pastTile = currentTile;
         currentTile.CurrentUnit = null;
         foreach (Tile step in steps)
         {
@@ -152,23 +183,25 @@ public class Unit : MonoBehaviour
     /// <summary>
     /// Generates the move spaces.
     /// </summary>
-    public Dictionary<Tile, ActionSpace> GenerateMoveSpaces()
+    /// <param name="_cosmetic">Whether to render the squares inert (ie, if they are an enemy's)</param>
+    public Dictionary<Tile, ActionSpace> GenerateMoveSpaces(bool _cosmetic)
     {
         Dictionary<Tile, ActionSpace> spaces = new Dictionary<Tile, ActionSpace>();
 
         moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius); //add checks for if this changes between drawing squares and metamove
-
         foreach (KeyValuePair<Tile,int> pair in moveTree)
         {
             Vector3 position = pair.Key.Position;
             ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
             moveSpaceScript.parentUnit = this;
-            moveSpaceScript.currentTile = currentTile;
+            moveSpaceScript.currentTile = pair.Key;
             moveSpaceScript.action = Action.Move;
+            moveSpaceScript.Active = _cosmetic;
             spaces[pair.Key] = moveSpaceScript;
         }
 
         actionSpaces = spaces;
+        _GameManager.instance.Cursor.actionSpaces = spaces;
         return spaces;
     }
 
@@ -177,6 +210,7 @@ public class Unit : MonoBehaviour
         Dictionary<Tile, ActionSpace> spaces = new Dictionary<Tile, ActionSpace>();
 
         actionSpaces = spaces;
+        _GameManager.instance.Cursor.actionSpaces = spaces;
         return spaces;
     }
 
@@ -192,6 +226,7 @@ public class Unit : MonoBehaviour
 
     public void StartActPhase()
     {
+        Debug.Log("starting act phase");
         acting = true;
         EraseSpaces();
         GenerateActSpaces();
@@ -201,9 +236,14 @@ public class Unit : MonoBehaviour
 
     public void EndActPhase()
     {
+        Debug.Log("ending act phase");
         EraseSpaces();
         acting = false;
         acted = true;
+        if (!controller.RetireUnit(this))
+        {
+            controller.StepTurn();
+        }
     }
 
     private void TakeDamage()
@@ -215,6 +255,8 @@ public class Unit : MonoBehaviour
     {
         if (space.action == Action.Move)
         {
+            Debug.Log("Unit moving");
+            Debug.Log(space.currentTile.Position);
             MetaMove(space.currentTile);
         }
     }
