@@ -10,6 +10,7 @@ public class Cursor : MonoBehaviour
     private float inverseMoveTime;
 
     private bool moving;
+    private bool locked;
 
     public Controller PlayerController;
     public Tile currentTile { get; private set; }
@@ -40,72 +41,128 @@ public class Cursor : MonoBehaviour
             float y = Input.GetAxisRaw("Vertical") * Time.deltaTime;
             if (Mathf.Abs(x) > Mathf.Epsilon || Mathf.Abs(y) > Mathf.Epsilon)
             {
-                AdjacentDirection horizontal;
-                AdjacentDirection vertical;
-                if (Mathf.Abs(x) <= Mathf.Epsilon)
+                if (!locked) //If the camera isn't locked during unit's action phase, Do normal movement
                 {
-                    horizontal = AdjacentDirection.None;
-                }
-                else if (x > 0)
-                {
-                    horizontal = AdjacentDirection.Right;
+                    AdjacentDirection horizontal;
+                    AdjacentDirection vertical;
+                    if (Mathf.Abs(x) <= Mathf.Epsilon)
+                    {
+                        horizontal = AdjacentDirection.None;
+                    }
+                    else if (x > 0)
+                    {
+                        horizontal = AdjacentDirection.Right;
+                    }
+                    else
+                    {
+                        horizontal = AdjacentDirection.Left;
+                    }
+                    if (Mathf.Abs(y) <= Mathf.Epsilon)
+                    {
+                        vertical = AdjacentDirection.None;
+                    }
+                    else if (y > 0)
+                    {
+                        vertical = AdjacentDirection.Up;
+                    }
+                    else
+                    {
+                        vertical = AdjacentDirection.Down;
+                    }
+                    Tile tile = currentTile.GetAdjacentTile(horizontal == AdjacentDirection.None ? vertical : horizontal);
+                    if (tile != null)
+                        StartCoroutine(SmoothMovement(tile)); //Traverse horizontally, then vertically
                 }
                 else
                 {
-                    horizontal = AdjacentDirection.Left;
+                    //do special movement (hop to only action spaces, move through menu, etc)
                 }
-                if (Mathf.Abs(y) <= Mathf.Epsilon)
-                {
-                    vertical = AdjacentDirection.None;
-                }
-                else if (y > 0)
-                {
-                    vertical = AdjacentDirection.Up;
-                }
-                else
-                {
-                    vertical = AdjacentDirection.Down;
-                }
-                Tile tile = currentTile.GetAdjacentTile(horizontal == AdjacentDirection.None ? vertical : horizontal);
-                if (tile != null)
-                    StartCoroutine(SmoothMovement(tile)); //Traverse horizontally, then vertically
             }
-            //Selected unit traps the cursor into controlling a specific unit.
-            else if (Input.GetButtonDown("confirm") && PlayerController.Current.Item1 == selectedUnit && PlayerController.Current.Item2 == Action.Attack)
-            { //just skip the act phase of the select unit
-                selectedUnit.EndActPhase();
-                selectedUnit = null;
-            }
+            /*
+            After getting movement out of the way, the general workflow is as follows (upon pressing Z):
+                -Check if the cursor has a currently selected unit AND the unit isn't currently doing anything.
+                    --If it is a player unit AND if the current tile is an action space:
+                        ---perform that action space.
+                            Lock the camera if it was a mmovement tile, the player is now forced to finish
+                            that unit's turn (or may press X to revert it, see the branch with reverse).
+                    --Else, deselect the unit and possibly select a unit underneath (spawning its movespaces).
+                        Note, in the case where the currentTile has the selectedUnit:
+                        The cursor should be locked to non-movement action spaces (to force the player to take action),
+                        so there shouldn't be a case where the player selects its selectedUnit with no action space
+                        (in general, unless no actions are possible currently i just have it so pressing z
+                        after moving automatically skips the rest of the turn).
+                -Else, if we have no selected unit, check if the current tile has a unit.
+                    --If it is spent, ignore it
+                    --Else, it really should not have moved (since units must perform all their actions at once), but we shall check that too
+                        ---If it hasn't moved, generate its movespaces and select it
+             Pressing X, the reverse button, checks if the unit isn't currently performing some parallel action (like moving), and if it passes,
+             we revert the unit to before being selected (for now, it just assumes that means the unit is fresh, later on we might need more comprehensive
+             history tracking, it would be frustrating to have everything you did on a unit revert (like items));
+             */
             else if (Input.GetButtonDown("confirm"))
             {
-                //Behavior: priotize any actionspace on the tile over the unit on the tile, and if the unit can't do anything, then perform any move actionspace
-                if (actionSpaces.ContainsKey(currentTile) && actionSpaces[currentTile] != null && actionSpaces[currentTile].action != Action.Move)
-                {
-                    actionSpaces[currentTile].Activate();
-                    //actionSpaces.Clear();
+
+                //TEMPORARY:
+                if (PlayerController.Current.Item1 == selectedUnit && PlayerController.Current.Item2 == Action.Attack)
+                { //just skip the attack phase of the player controlled unit
+                    Debug.Log("Temporary automatic performance of attack upon pressing Z");
+                    selectedUnit.Attack(currentTile);
+                    selectedUnit = null;
+                    locked = false;
                 }
-                else if (currentTile.CurrentUnit != null && selectedUnit == null && !currentTile.CurrentUnit.moved)
+
+                if (selectedUnit != null && !selectedUnit.IsActive())
                 {
-                    selectedUnit = currentTile.CurrentUnit;
-                    if (PlayerController.unitsEnum.MoveToUnit(selectedUnit)) //player controls this unit -> all systems go
+                    if (selectedUnit.team == Team.Player && actionSpaces.ContainsKey(currentTile))
                     {
-                        PlayerController.unitsEnum.MoveToPhase(Action.Move); //set the controller to be in movement mode for the current unit
+                        Debug.Log("Selected unit is player, action space on tile");
+                        if (actionSpaces[currentTile].action == Action.Move)
+                        {
+                            locked = true;
+                        }
+                        actionSpaces[currentTile].Activate();
                     }
-                    actionSpaces = selectedUnit.GenerateMoveSpaces(selectedUnit.team == Team.Player);
+                    else {
+                        selectedUnit.controller.RevertMaybeTeleport(selectedUnit, selectedUnit.team == Team.Player);
+                        if (currentTile.CurrentUnit != null && !currentTile.CurrentUnit.Spent)
+                        {
+                            Debug.Log("Selected unit is not player or no action space on tile, and the current tile has a selectable unit");
+
+                            selectedUnit = currentTile.CurrentUnit;
+                            if (PlayerController.unitsEnum.MoveToUnit(selectedUnit)) //player controls this unit -> all systems go
+                            {
+                                PlayerController.unitsEnum.MoveToPhase(Action.Move); //set the controller to be in movement mode for the current unit
+                            }
+                            actionSpaces = selectedUnit.GenerateMoveSpaces(selectedUnit.team != Team.Player);
+                        }
+                        else
+                        {
+                            Debug.Log("No action space, no unit to select, no god");
+                            selectedUnit = null;
+                        }
+                    }
                 }
-                else if (actionSpaces.ContainsKey(currentTile) && actionSpaces[currentTile] != null && actionSpaces[currentTile].action == Action.Move)
+                else if (selectedUnit == null)
                 {
-                    Debug.Log("tryin to activate move space");
-                    actionSpaces[currentTile].Activate();
-                    //actionSpaces.Clear();
+                    if (currentTile.CurrentUnit != null && !currentTile.CurrentUnit.Spent)
+                    {
+                        Debug.Log("Selected unit is null, unit on the tile, the unit is not spent");
+                        selectedUnit = currentTile.CurrentUnit;
+                        if (PlayerController.unitsEnum.MoveToUnit(selectedUnit)) //player controls this unit -> all systems go
+                        {
+                            PlayerController.unitsEnum.MoveToPhase(Action.Move); //set the controller to be in movement mode for the current unit
+                        }
+                        actionSpaces = selectedUnit.GenerateMoveSpaces(selectedUnit.team != Team.Player);
+                    }
                 }
             }
             else if (Input.GetButtonDown("reverse"))
             {
-                if (selectedUnit != null)
+                if (selectedUnit != null && !selectedUnit.IsActive())
                 {
                     selectedUnit.controller.RevertMaybeTeleport(selectedUnit, selectedUnit.team == Team.Player);
                     selectedUnit = null;
+                    locked = false;
                 }
             }
         }

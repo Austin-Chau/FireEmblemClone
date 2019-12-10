@@ -1,32 +1,27 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class Unit : MonoBehaviour
 {
 
     #region Public Variables
-    public LayerMask blockingLayer;
-    public LayerMask actingLayer;
-
     public GameObject MoveSpace;
     public GameObject ActSpace;
 
     public float moveTime = 0.1f;
-
-    public bool moving = false;
-    public bool moved = false;
-    public bool acting = false;
-    public bool acted = false;
-
     public int actRadius = 1;
     public int moveRadius = 3;
 
     public Tile currentTile { get; private set; }
     public Tile pastTile { get; private set; }
 
+    public bool Spent { get; private set; }
+
     public Team team { get; private set; }
     public Controller controller { get; private set; }
+
     #endregion
 
     #region Private variables
@@ -40,6 +35,9 @@ public class Unit : MonoBehaviour
 
     private Dictionary<Tile, int> moveTree;
 
+    private Dictionary<Action, bool> phaseFlags = new Dictionary<Action, bool>(); //moved, attacked, etc
+    private Dictionary<Action, bool> phaseActiveFlags = new Dictionary<Action, bool>(); //moving, attacking, etc
+
     #endregion
 
     public void Start()
@@ -47,6 +45,29 @@ public class Unit : MonoBehaviour
         animator = GetComponent<Animator>();
         rb2D = GetComponent<Rigidbody2D>();
         inverseMoveTime = 1f / moveTime;
+        foreach (Action action in (Action[]) Enum.GetValues(typeof(Action)))
+        {
+            phaseFlags[action] = false;
+            phaseActiveFlags[action] = false;
+        }
+    }
+
+    public bool GetPhaseFlag(Action action)
+    {
+        return phaseFlags[action];
+    }
+    public bool GetActivePhaseFlag(Action action)
+    {
+        return phaseActiveFlags[action];
+    }
+    public bool IsActive()
+    {
+        bool Bool = false;
+        foreach (Action action in phaseActiveFlags.Keys)
+        {
+            Bool |= phaseActiveFlags[action];
+        }
+        return Bool;
     }
 
     /// <summary>
@@ -58,25 +79,91 @@ public class Unit : MonoBehaviour
     public void InitializeUnit(Tile _spawnTile, Team _team, Controller _controller)
     {
         team = _team;
+        if (team == Team.Enemy)
+        {
+            GetComponent<SpriteRenderer>().flipX = true;
+        }
         controller = _controller;
         currentTile = _spawnTile;
+        pastTile = currentTile;
         transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
         ResetStates();
     }
+
+    #region Data Access Methods
+
+    /// <summary>
+    /// Generates and returns the move tree of this unit.
+    /// </summary>
+    /// <returns></returns>
+    public Dictionary<Tile, int> GetMoveTree()
+    {
+        Dictionary<Tile, int> tree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
+        return tree;
+    }
+
+    /// <summary>
+    /// Returns a random tile from a given movetree.
+    /// </summary>
+    /// <param name="_moveTree"></param>
+    /// <returns></returns>
+    public static Tile GetRandomTileFromMoveTree(Dictionary<Tile, int> _moveTree)
+    {
+        var random = new System.Random();
+        List<Tile> keys = new List<Tile>(_moveTree.Keys);
+        int index = random.Next(keys.Count);
+        return keys[index];
+    }
+
+    #endregion
+
+    #region Turn Flow Methods
+
     /// <summary>
     /// Initializes the various state checking variables of this unit.
     /// </summary>
     public void ResetStates()
     {
-        moving = false;
-        moved = false;
-        acting = false;
-        acted = false;
+        Debug.Log("Reset states");
+        List<Action> keys = new List<Action>(phaseFlags.Keys);
+        foreach (Action action in keys)
+        {
+            phaseFlags[action] = false;
+            phaseActiveFlags[action] = false;
+        }
+        Spent = false;
         EraseSpaces();
     }
+
     /// <summary>
-    /// Teleports a unit to a certain tile. Warning: erases pastTile information, this is meant as an absolute movement.
+    /// Tests if this unit should end its turn. Returns true if so.
+    /// </summary>
+    public bool QueryEndOfTurn()
+    {
+        bool Bool = true;
+        foreach (KeyValuePair<Action, bool> pair in phaseFlags)
+        {
+            Bool &= pair.Value;
+        }
+        return Bool;
+    }
+
+    /// <summary>
+    /// Cleans up this unit to be inert for the rest of its controller's turn.
+    /// </summary>
+    public void EndActions()
+    {
+        pastTile = currentTile;
+        EraseSpaces();
+        Spent = true;
+    }
+
+    #endregion
+
+    #region Action Methods
+    /// <summary>
+    /// Teleports a unit to a certain tile. Erases pastTile information, this is meant as an absolute forced movement.
     /// </summary>
     /// <param name="destinationTile"></param>
     public virtual void Teleport(Tile destinationTile)
@@ -95,6 +182,7 @@ public class Unit : MonoBehaviour
     /// <param name="destinationTile">The destination tile.</param>
     public virtual void MetaMove(Tile destinationTile)
     {
+        Debug.Log("MetaMove called");
         moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
         Stack<Tile> steps = Pathfinding.GenerateSteps(currentTile, destinationTile, moveTree);
 
@@ -110,7 +198,7 @@ public class Unit : MonoBehaviour
 
             if (steps.Count > 0)
             {
-                //There is more than one tile in the path, the unit is actually moving
+                //There is more than one non-starting tile in the path, the unit is actually moving
                 do
                 {
                     secondTile = steps.Pop();
@@ -130,6 +218,10 @@ public class Unit : MonoBehaviour
 
                 stepsVertices.Add(secondTile);
             }
+            else //the first non-starting tile is the only vertex in the movement, so we just add that and move on
+            { 
+                stepsVertices.Add(firstTile);
+            }
         }
         else
         {
@@ -147,16 +239,19 @@ public class Unit : MonoBehaviour
     /// <returns>A coroutine for every step.</returns>
     private IEnumerator SequenceOfMoves(List<Tile> steps)
     {
-        moving = true;
-        pastTile = currentTile;
-        currentTile.CurrentUnit = null;
-        foreach (Tile step in steps)
+        if (steps.Count > 0)
         {
-            yield return StartCoroutine(SmoothMovement(step));
+            phaseActiveFlags[Action.Move] = true;
+            pastTile = currentTile;
+            currentTile.CurrentUnit = null;
+            foreach (Tile step in steps)
+            {
+                yield return StartCoroutine(SmoothMovement(step));
+            }
+            phaseActiveFlags[Action.Move] = false;
+            currentTile.CurrentUnit = this;
         }
-        moving = false;
-        moved = true;
-        currentTile.CurrentUnit = this;
+        phaseFlags[Action.Move] = true;
         controller.StepTurn();
     }
 
@@ -181,9 +276,10 @@ public class Unit : MonoBehaviour
     }
 
     /// <summary>
-    /// Generates the move spaces.
+    /// Generates the move spaces of a unit.
     /// </summary>
-    /// <param name="_cosmetic">Whether to render the squares inert (ie, if they are an enemy's)</param>
+    /// <param name="_cosmetic">If true, the squares will be inert and ActionSpace.Activate will do nothing (ie, if they are an enemy's)</param>
+    /// <returns>A dictionary of tiles with their associated act spaces.</returns>
     public Dictionary<Tile, ActionSpace> GenerateMoveSpaces(bool _cosmetic)
     {
         Dictionary<Tile, ActionSpace> spaces = new Dictionary<Tile, ActionSpace>();
@@ -196,7 +292,7 @@ public class Unit : MonoBehaviour
             moveSpaceScript.parentUnit = this;
             moveSpaceScript.currentTile = pair.Key;
             moveSpaceScript.action = Action.Move;
-            moveSpaceScript.Active = _cosmetic;
+            moveSpaceScript.Active = !_cosmetic;
             spaces[pair.Key] = moveSpaceScript;
         }
 
@@ -205,16 +301,34 @@ public class Unit : MonoBehaviour
         return spaces;
     }
 
-    public Dictionary<Tile, ActionSpace> GenerateActSpaces()
+    /// <summary>
+    /// Generates the act spaces.
+    /// </summary>
+    /// <param name="_cosmetic">Whether to render the squares inert (ie, if they are an enemy's)</param>
+    /// <returns>A dictionary of tiles with their associated act spaces.</returns>
+    public Dictionary<Tile, ActionSpace> GenerateActSpaces(bool _cosmetic)
     {
         Dictionary<Tile, ActionSpace> spaces = new Dictionary<Tile, ActionSpace>();
-
+        //for every action besides movement, spawn and layer the actionspaces so the player can see what options are available
         actionSpaces = spaces;
         _GameManager.instance.Cursor.actionSpaces = spaces;
         return spaces;
     }
 
-    //Erases the move squares around the unit
+    /// <summary>
+    /// The general attack method.
+    /// </summary>
+    /// <param name="_tile"></param>
+    public void Attack(Tile _tile)
+    {
+        //Currently just doesn't do an attack but acts like it did.
+        phaseFlags[Action.Attack] = true;
+        controller.StepTurn();
+    }
+
+    /// <summary>
+    /// Erases the spaces held by the unit, also tells them to delete themselves.
+    /// </summary>
     public void EraseSpaces()
     {
         foreach (KeyValuePair<Tile,ActionSpace> pair in actionSpaces)
@@ -224,40 +338,29 @@ public class Unit : MonoBehaviour
         actionSpaces.Clear();
     }
 
-    public void StartActPhase()
+    public void PopulateActionMenu()
     {
-        Debug.Log("starting act phase");
-        acting = true;
-        EraseSpaces();
-        GenerateActSpaces();
-        //pop up the menu of actions, have the player select one, unless they are an npc
-        //npcs should automatically select an action
     }
 
-    public void EndActPhase()
-    {
-        Debug.Log("ending act phase");
-        EraseSpaces();
-        acting = false;
-        acted = true;
-        if (!controller.RetireUnit(this))
-        {
-            controller.StepTurn();
-        }
-    }
-
-    private void TakeDamage()
-    {
-        animator.SetTrigger("playerHit");
-    }
-
+    /// <summary>
+    /// Interprets the action that should be performed by a passed actionspace.
+    /// </summary>
+    /// <param name="space"></param>
     public void ParseAction(ActionSpace space)
     {
-        if (space.action == Action.Move)
+        switch (space.action)
         {
-            Debug.Log("Unit moving");
-            Debug.Log(space.currentTile.Position);
-            MetaMove(space.currentTile);
+            case Action.Move:
+                MetaMove(space.currentTile);
+                break;
+            case Action.Attack:
+                Attack(space.currentTile);
+                break;
+            default:
+                Debug.Log("Error, unhandled action attempted to be performed by " + team + "'s unit");
+                break;
         }
     }
+
+    #endregion
 }

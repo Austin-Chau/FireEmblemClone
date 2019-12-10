@@ -13,6 +13,9 @@ public class Controller
     public ControllerBehavior behavior { get; private set; }
     public bool MyTurn { get; private set; }
 
+    /// <summary>
+    /// Returns a tuple containing the unit, and the action that is currently expected to be performed.
+    /// </summary>
     public Tuple<Unit,Action> Current
     {
         get
@@ -93,32 +96,48 @@ public class Controller
         //put business for the start of the turn
         if (behavior != null && behavior.autoTurn)
         {
-            //if this controller has a behavior, start a cascade of the units acting
+            //if this controller has a behavior, start a cascade of the units behaving
             StepTurn();
         }
     }
 
     /// <summary>
-    /// Called by the child unit to indicate that it has finished its currnent action and is ready to perform the next
+    /// Called by the child unit to indicate that it has finished its current action and is ready to perform the next.
+    /// Checks if the unit's turn should end, and if the controller's turn should end.
     /// </summary>
     public void StepTurn()
     {
-        Debug.Log(Team+ " performs step turn");
+        if (!MyTurn)
+        {
+            return;
+        }
+        if (unitsEnum.Current.Item1.QueryEndOfTurn())
+        {
+            Debug.Log("Unit has ended its movements");
+            unitsEnum.Current.Item1.EndActions();
+            if (RetireUnit(unitsEnum.Current.Item1))
+            {
+                EndTurn();
+                return;
+            }
+        }
+        Debug.Log(Team + " is stepping its turn");
         if (unitsEnum.MoveNext(behavior.autoTurn))
         {
-            Debug.Log("parsing action");
             Debug.Log(unitsEnum.Current);
             behavior.ParseAction(unitsEnum.Current);
         }
         else
         {
             EndTurn();
+            return;
             //end the turn
         }
     }
 
     private void EndTurn()
     {
+        Debug.Log(Team + " is ending its turn");
         MyTurn = false;
         _GameManager.instance.PassTurn();
     }
@@ -143,15 +162,16 @@ public class Controller
     /// Removes a unit from the active list of units and checks if it is now empty, signalling the end of a turn. Returns true in that case.
     /// </summary>
     /// <param name="_unit"></param>
-    /// <returns>True if successful, false otherwise.</returns>
+    /// <returns>True if the turn is ending, false otherwise.</returns>
     public bool RetireUnit(Unit _unit)
     {
-        bool successful = actableUnits.Remove(_unit);
+        actableUnits.Remove(_unit);
         if (actableUnits.Count < 1)
         {
-            EndTurn();
+            Debug.Log("Retired a unit, and now the controller is out of units");
             return true;
         }
+        Debug.Log("Retired a unit, but the controller has more");
         return false;
     }
     #endregion
@@ -205,8 +225,6 @@ public class UnitsEnum
     /// <returns>Returns true if position is in bounds of Units, false otherwise.</returns>
     public bool MoveNext(bool shiftUnit)
     {
-        Debug.Log(subPosition);
-        Debug.Log(position);
         subPosition++;
         if (subPosition >= subLength)
         {
@@ -216,8 +234,6 @@ public class UnitsEnum
                 position++;
             }
         }
-        Debug.Log(position >= 0);
-        Debug.Log(position < Units.Length);
         return (position >= 0 && position < Units.Length);
     }
     public bool MoveBack(bool shiftUnit)

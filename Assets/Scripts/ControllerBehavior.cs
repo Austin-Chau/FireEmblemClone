@@ -9,6 +9,11 @@ public abstract class ControllerBehavior
     /// Decides if this controller should automatically move to the next unit
     /// </summary>
     public bool autoTurn;
+
+    /// <summary>
+    /// Given a tuple of a unit and an action, passes to the proper behavior set on the object
+    /// </summary>
+    /// <param name="tuple"></param>
     public void ParseAction(Tuple<Unit, Action> tuple)
     {
         switch (tuple.Item2)
@@ -29,34 +34,27 @@ public abstract class ControllerBehavior
 }
 
 public class BasicEnemy : ControllerBehavior
-{
+{ //This AI is rudimentary, it just moves to a random tile in the tree
     public BasicEnemy()
     {
         autoTurn = true;
     }
     protected override void Move(Unit _unit)
     {
-        Debug.Log("trying to move a unit");
+        Debug.Log("Trying to move an enemy.");
         Tile tile;
-        //don't judge
-        if (_unit.currentTile.GetAdjacentTile(AdjacentDirection.Left) != null)
-            tile = _unit.currentTile.GetAdjacentTile(AdjacentDirection.Left).GetAdjacentTile(AdjacentDirection.Left);
-        else
-            tile = _unit.currentTile;
-        if (tile == null)
-            tile = _unit.currentTile;
+        tile = Unit.GetRandomTileFromMoveTree(_unit.GetMoveTree());
         _unit.MetaMove(tile);
     }
 
     protected override void Attack(Unit _unit)
     {
-        _unit.StartActPhase();
-        _unit.EndActPhase();
+        _unit.Attack((Tile)null);
     }
 }
 
 public class PlayerBehavior : ControllerBehavior
-{
+{ //The behaviors for what a player's unit should do when the controller interacts with it
     public PlayerBehavior()
     {
         autoTurn = false;
@@ -69,6 +67,6 @@ public class PlayerBehavior : ControllerBehavior
 
     protected override void Attack(Unit _unit)
     {
-        _unit.StartActPhase();
+        _unit.EraseSpaces();
     }
 }

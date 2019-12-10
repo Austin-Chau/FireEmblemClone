@@ -11,11 +11,6 @@ public class UnitMenu : MonoBehaviour
     {
         
     }
-
-    void Create(MenuStates state)
-    {
-
-    }
     void AddOptions()
     {
 

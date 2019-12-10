@@ -30,7 +30,8 @@ public class GUI : MonoBehaviour
     {
         if (_GameManager.instance.Cursor.selectedUnit != null)
         { //ya this aint good but it's tentative
-            actionText.text = "Unit: "+TeamNames[_GameManager.instance.Cursor.selectedUnit.team]+" "+ ActionNames[_GameManager.instance.Cursor.selectedUnit.controller.unitsEnum.Current.Item2];
+            actionText.text = "Selected Unit: { Team: "+TeamNames[_GameManager.instance.Cursor.selectedUnit.team]+", Phase: "+ ActionNames[_GameManager.instance.Cursor.selectedUnit.controller.unitsEnum.Current.Item2]+"}" +
+                "\n The camera locks post movement of your unit. Press Z to pass attack.";
         }
         else
         {
