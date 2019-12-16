@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 
-public abstract class ControllerBehavior
+public abstract class ActionManager
 {
     /// <summary>
     /// Decides if this controller should automatically move to the next unit
@@ -31,9 +31,11 @@ public abstract class ControllerBehavior
 
     protected abstract void Move(Unit _unit);
     protected abstract void Attack(Unit _unit);
+    public abstract bool ParseTile(Unit _unit, Tile _tile);
+    public abstract CommanderParseCursorOutput ParseActions(Unit _unit, List<Action> _actions);
 }
 
-public class BasicEnemy : ControllerBehavior
+public class BasicEnemy : ActionManager
 { //This AI is rudimentary, it just moves to a random tile in the tree
     public BasicEnemy()
     {
@@ -53,7 +55,7 @@ public class BasicEnemy : ControllerBehavior
     }
 }
 
-public class PlayerBehavior : ControllerBehavior
+public class PlayerBehavior : ActionManager
 { //The behaviors for what a player's unit should do when the controller interacts with it
     public PlayerBehavior()
     {
@@ -69,4 +71,19 @@ public class PlayerBehavior : ControllerBehavior
     {
         _unit.EraseSpaces();
     }
+
+    /// <summary>
+    /// Returns whether or not an action was performed at this space.
+    /// </summary>
+    /// <param name="_unit"></param>
+    /// <param name="_tile"></param>
+    /// <returns></returns>
+    public override bool ParseTile(Unit _unit, Tile _tile)
+    {
+        if (_unit.actionSpaces[_tile] == null)
+        {
+            return false;
+        }
+    }
+
 }

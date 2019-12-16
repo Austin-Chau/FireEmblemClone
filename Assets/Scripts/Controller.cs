@@ -3,24 +3,26 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Controller
+public class Commander
 {
     public Team Team { get; private set; }
 
     private List<Unit> Units = new List<Unit>();
     private List<Unit> actableUnits = new List<Unit>(); //a list to keep track of which units still need to move
-    public UnitsEnum unitsEnum { get; private set; }
-    public ControllerBehavior behavior { get; private set; }
+    public UnitsTracker UnitsTracker { get; private set; }
+    public ActionManager ActionManager { get; private set; }
     public bool MyTurn { get; private set; }
+
+    private Unit selectedUnit;
 
     /// <summary>
     /// Returns a tuple containing the unit, and the action that is currently expected to be performed.
     /// </summary>
-    public Tuple<Unit,Action> Current
+    public Unit CurrentUnit
     {
         get
         {
-            return unitsEnum.Current;
+            return UnitsTracker.Current;
         }
     }
 
@@ -28,12 +30,98 @@ public class Controller
     /// Sets the team and behavior of this controller. 
     /// </summary>
     /// <param name="_team">The team</param>
-    public Controller(Team _team, ControllerBehavior _behavior)
+    public Commander(Team _team, ActionManager _actionManager)
     {
-        unitsEnum = new UnitsEnum();
+        UnitsTracker = new UnitsTracker();
         Team = _team;
-        behavior = _behavior;
+        ActionManager = _actionManager;
     }
+
+    #region Cursor Parsing
+
+    /// <summary>
+    /// Handles the behavior of what units should do when the cursor selects them.
+    /// </summary>
+    /// <param name="_cursorContext"></param>
+    /// <returns>Returns what the currently selected unit should be set to.</returns>
+    public CommanderParseCursorOutput ParseCursorOutput(CursorContext _cursorContext)
+    {
+        CursorContext context = _cursorContext;
+        List<Tile> restrictedSpaces = new List<Tile>();
+        switch (context.inputButton)
+        {
+            case ControlsEnum.Confirm:
+                if (selectedUnit == null && context.currentTile.CurrentUnit == null)
+                {
+
+                }
+                else if (selectedUnit == null && context.currentTile.CurrentUnit != null)
+                {
+                    selectedUnit = context.currentTile.CurrentUnit;
+                    if (selectedUnit.commander != this)
+                    {
+                        //render action spaces, purely visual
+                        return new CommanderParseCursorOutput(false, restrictedSpaces);
+                    }
+                    else if (!context.currentTile.CurrentUnit.Spent)
+                    {
+                        //this is our unit, so we shall start using it
+                        List<Action> possibleActions = selectedUnit.GetAllActionFlags();
+                        return ActionManager.ParseActions(selectedUnit, possibleActions);
+                    }
+                }
+                else if (selectedUnit != null && !selectedUnit.IsPerformingAction())
+                {
+                    if (ActionManager.ParseTile(selectedUnit, context.currentTile))
+                    {
+
+                    }
+                    else
+                    { 
+                        selectedUnit.controller.RevertMaybeTeleport(selectedUnit, selectedUnit.team == Team.Player);
+                        if (currentTile.CurrentUnit != null && !currentTile.CurrentUnit.Spent)
+                        {
+                            Debug.Log("Selected unit is not player or no action space on tile, and the current tile has a selectable unit");
+
+                            selectedUnit = currentTile.CurrentUnit;
+                            if (PlayerController.unitsEnum.MoveToUnit(selectedUnit)) //player controls this unit -> all systems go
+                            {
+                                PlayerController.unitsEnum.MoveToPhase(Action.Move); //set the controller to be in movement mode for the current unit
+                            }
+                            actionSpaces = selectedUnit.GenerateMoveSpaces(selectedUnit.team != Team.Player);
+                        }
+                        else
+                        {
+                            Debug.Log("No action space, no unit to select, no god");
+                            selectedUnit = null;
+                        }
+                    }
+                }
+                break;
+
+            case ControlsEnum.Reverse:
+                if (selectedUnit != null && !selectedUnit.IsPerformingAction())
+                {
+                    selectedUnit.commander.RevertMaybeTeleport(selectedUnit, selectedUnit.commander == this);
+                    selectedUnit = null;
+                    return new CommanderParseCursorOutput(false, restrictedSpaces);
+                }
+                break;
+
+            default:
+                break;
+        }
+
+            //TEMPORARY:
+            if (PlayerController.Current.Item1 == selectedUnit && PlayerController.Current.Item2 == Action.Attack)
+            { //just skip the attack phase of the player controlled unit
+                Debug.Log("Temporary automatic performance of attack upon pressing Z");
+                selectedUnit.Attack(currentTile);
+                selectedUnit = null;
+                locked = false;
+            }
+    }
+    #endregion
 
     /// <summary>
     /// Adds a unit to this controllers list of units while setting its spawn tile.
@@ -48,8 +136,9 @@ public class Controller
             return false;
         }
         Units.Add(_unit);
+        actableUnits.Add(_unit);
         _unit.InitializeUnit(_spawnTile, Team, this);
-        unitsEnum.UpdateUnits(Units.ToArray());
+        UnitsTracker.UpdateUnits(Units.ToArray());
         return true;
     }
 
@@ -67,7 +156,7 @@ public class Controller
         Units.Add(_unit);
         actableUnits.Add(_unit);
         _unit.InitializeUnit(_unit.currentTile, Team, this);
-        unitsEnum.UpdateUnits(Units.ToArray());
+        UnitsTracker.UpdateUnits(Units.ToArray());
         return true;
     }
 
@@ -82,7 +171,7 @@ public class Controller
         return Units.Remove(_unit);
     }
 
-    public void PerformTurn()
+    public void StartTurn()
     {
         MyTurn = true;
         actableUnits = new List<Unit>();
@@ -91,12 +180,12 @@ public class Controller
             unit.ResetStates();
             actableUnits.Add(unit);
         }
-        unitsEnum.Initialize(Units.ToArray());
+        UnitsTracker.Initialize(Units.ToArray());
 
         //put business for the start of the turn
-        if (behavior != null && behavior.autoTurn)
+        if (ActionManager != null && ActionManager.autoTurn)
         {
-            //if this controller has a behavior, start a cascade of the units behaving
+            //if this controller has a behavior that automatically performs the turn, start a cascade of the units behaving
             StepTurn();
         }
     }
@@ -105,27 +194,27 @@ public class Controller
     /// Called by the child unit to indicate that it has finished its current action and is ready to perform the next.
     /// Checks if the unit's turn should end, and if the controller's turn should end.
     /// </summary>
-    public void StepTurn()
+    public void StepTurn() // NEEDS REDOING (units now are commanded by their actionmanager on what to do, not based on what the unitstracker says
     {
         if (!MyTurn)
         {
             return;
         }
-        if (unitsEnum.Current.Item1.QueryEndOfTurn())
+        if (UnitsTracker.Current.QueryEndOfTurn())
         {
             Debug.Log("Unit has ended its movements");
-            unitsEnum.Current.Item1.EndActions();
-            if (RetireUnit(unitsEnum.Current.Item1))
+            UnitsTracker.Current.EndActions();
+            if (RetireUnit(UnitsTracker.Current))
             {
                 EndTurn();
                 return;
             }
         }
         Debug.Log(Team + " is stepping its turn");
-        if (unitsEnum.MoveNext(behavior.autoTurn))
+        if (UnitsTracker.MoveNext())
         {
-            Debug.Log(unitsEnum.Current);
-            behavior.ParseAction(unitsEnum.Current);
+            Debug.Log(UnitsTracker.Current);
+            ActionManager.ParseAction(UnitsTracker.Current);
         }
         else
         {
@@ -155,7 +244,6 @@ public class Controller
             _unit.Teleport(_unit.pastTile);
         }
         _unit.ResetStates();
-        unitsEnum.MoveToPhase(Action.Move);
     }
 
     /// <summary>
@@ -190,116 +278,4 @@ public enum Team
 {
     Player,
     Enemy
-}
-public class UnitsEnum
-{
-    private Unit[] Units;
-    int position = -1; //which unit in the Units array it is the turn of
-    int subPosition = -1; //the unit's phase
-    int subLength = Enum.GetNames(typeof(Action)).Length; //the number of actions
-
-    /// <summary>
-    /// Resets to the initial state.
-    /// </summary>
-    public void Reset()
-    {
-        position = 0;
-        subPosition = -1;
-    }
-
-    public void Initialize(Unit[] _units)
-    {
-        Units = _units;
-        Reset();
-    }
-
-    public void UpdateUnits(Unit[] _units)
-    {
-        Units = _units;
-    }
-
-    /// <summary>
-    /// Steps an action phase, and optionally a unit if subPosition exceeds the number of actions.
-    /// </summary>
-    /// <param name="shiftUnit">Whether or not the next unit should automatically be moved to.</param>
-    /// <returns>Returns true if position is in bounds of Units, false otherwise.</returns>
-    public bool MoveNext(bool shiftUnit)
-    {
-        subPosition++;
-        if (subPosition >= subLength)
-        {
-            subPosition = 0;
-            if (shiftUnit)
-            {
-                position++;
-            }
-        }
-        return (position >= 0 && position < Units.Length);
-    }
-    public bool MoveBack(bool shiftUnit)
-    {
-        subPosition--;
-        if (subPosition < 0)
-        {
-            subPosition = 0;
-            if (shiftUnit)
-            {
-                position--;
-            }
-        }
-        return (position >= 0 && position < Units.Length);
-    }
-
-    /// <summary>
-    /// Move to the next unit, skips all action phases not yet done, resets subPosition.
-    /// </summary>
-    /// <returns>Returns true if position is in bounds of Units, false otherwise.</returns>
-    public bool MoveToNextUnit()
-    {
-        subPosition = 0;
-        position++;
-        return (position < Units.Length);
-    }
-
-    /// <summary>
-    /// Switches position to a specific unit
-    /// </summary>
-    /// <param name="_unit">A reference to the unit to move to</param>
-    /// <returns>True if successfuly moved to the unit, false otherwise (if the unit is not in Units)</returns>
-    public bool MoveToUnit(Unit _unit)
-    {
-        int pos = Array.IndexOf(Units, _unit);
-        if (pos < 0)
-        {
-            return false;
-        }
-        position = pos;
-        subPosition = 0;
-        return true;
-    }
-
-    /// <summary>
-    /// Switches subPosition to a specific Action
-    /// </summary>
-    /// <param name="_action">The action to move to</param>
-    public void MoveToPhase(Action _action)
-    {
-        subPosition = (int)_action;
-    }
-
-    /// <summary>
-    /// Returns a tuple containing a unit that should act, and then the action it should perform.
-    /// </summary>
-    public Tuple<Unit,Action> Current
-    {
-        get
-        {
-            if (subPosition < 0)
-            {
-                return new Tuple<Unit, Action>(Units[position], (Action)0);
-            }
-            return new Tuple<Unit, Action>(Units[position],(Action)subPosition);
-        }
-    }
-
 }

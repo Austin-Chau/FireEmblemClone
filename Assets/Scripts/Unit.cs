@@ -14,13 +14,15 @@ public class Unit : MonoBehaviour
     public int actRadius = 1;
     public int moveRadius = 3;
 
+    public Action currentAction;
+
     public Tile currentTile { get; private set; }
     public Tile pastTile { get; private set; }
-
+    public Dictionary<Tile, ActionSpace> actionSpaces = new Dictionary<Tile, ActionSpace>();
     public bool Spent { get; private set; }
 
     public Team team { get; private set; }
-    public Controller controller { get; private set; }
+    public Commander commander { get; private set; }
 
     #endregion
 
@@ -31,7 +33,7 @@ public class Unit : MonoBehaviour
 
     private float inverseMoveTime;
 
-    private Dictionary<Tile, ActionSpace> actionSpaces = new Dictionary<Tile, ActionSpace>();
+
 
     private Dictionary<Tile, int> moveTree;
 
@@ -60,7 +62,7 @@ public class Unit : MonoBehaviour
     {
         return phaseActiveFlags[action];
     }
-    public bool IsActive()
+    public bool IsPerformingAction()
     {
         bool Bool = false;
         foreach (Action action in phaseActiveFlags.Keys)
@@ -159,6 +161,19 @@ public class Unit : MonoBehaviour
         Spent = true;
     }
 
+    public List<Action> GetAllActionFlags()
+    {
+        List<Action> list = new List<Action>();
+        foreach (KeyValuePair<Action,bool> pair in phaseFlags)
+        {
+            if (pair.Value)
+            {
+                list.Add(pair.Key);
+            }
+        }
+
+        return list;
+    }
     #endregion
 
     #region Action Methods
