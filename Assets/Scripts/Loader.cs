@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class _Loader : MonoBehaviour
+public class Loader : MonoBehaviour
 {
     //prefab to instantiate
     public GameObject gameManager;
@@ -10,7 +10,7 @@ public class _Loader : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
-        if (_GameManager.instance == null)
+        if (GameManager.instance == null)
         {
             Instantiate(gameManager);
         }

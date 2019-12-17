@@ -1,10 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 
 public class Cursor : MonoBehaviour
 {
-    private _GameManager gameManager;
+    private GameManager gameManager;
 
     public float moveTime = 0.1f;
     private float inverseMoveTime;
@@ -18,16 +18,19 @@ public class Cursor : MonoBehaviour
     private void Start()
     {
         inverseMoveTime = 1 / moveTime;
-        gameManager = _GameManager.instance;
-        gameManager.Cursor = this;
+        gameManager = GameManager.instance;
         currentTile = gameManager.Board.Tiles[0, 0]; //whatever initial position
         transform.position = currentTile.Position; //snap to that tile
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        if (!CurrentCommander.MyTurn)
+        if (CurrentCommander == null)
+        {
+            return;
+        }
+        if (!CurrentCommander.MyTurn || locked)
         {
             return; //something went wrong, but we don't want to go around controlling their units when it isn't their turn
         }
@@ -48,46 +51,39 @@ public class Cursor : MonoBehaviour
 
             if (Mathf.Abs(x) > Mathf.Epsilon || Mathf.Abs(y) > Mathf.Epsilon)
             {
-                if (!locked) //If the camera isn't locked during unit's action phase, Do normal movement
+                AdjacentDirection horizontal;
+                AdjacentDirection vertical;
+                if (Mathf.Abs(x) <= Mathf.Epsilon)
                 {
-                    AdjacentDirection horizontal;
-                    AdjacentDirection vertical;
-                    if (Mathf.Abs(x) <= Mathf.Epsilon)
-                    {
-                        horizontal = AdjacentDirection.None;
-                    }
-                    else if (x > 0)
-                    {
-                        horizontal = AdjacentDirection.Right;
-                    }
-                    else
-                    {
-                        horizontal = AdjacentDirection.Left;
-                    }
-                    if (Mathf.Abs(y) <= Mathf.Epsilon)
-                    {
-                        vertical = AdjacentDirection.None;
-                    }
-                    else if (y > 0)
-                    {
-                        vertical = AdjacentDirection.Up;
-                    }
-                    else
-                    {
-                        vertical = AdjacentDirection.Down;
-                    }
-                    Tile tile = currentTile.GetAdjacentTile(horizontal == AdjacentDirection.None ? vertical : horizontal); //if the cursor isn't moving horizontally, move vertically
-                    if (tile != null)
-                        StartCoroutine(SmoothMovement(tile)); //Traverse horizontally, then vertically
+                    horizontal = AdjacentDirection.None;
+                }
+                else if (x > 0)
+                {
+                    horizontal = AdjacentDirection.Right;
                 }
                 else
                 {
-                    //do special movement (hop to only action spaces, move through menu, etc)
+                    horizontal = AdjacentDirection.Left;
                 }
+                if (Mathf.Abs(y) <= Mathf.Epsilon)
+                {
+                    vertical = AdjacentDirection.None;
+                }
+                else if (y > 0)
+                {
+                    vertical = AdjacentDirection.Up;
+                }
+                else
+                {
+                    vertical = AdjacentDirection.Down;
+                }
+                Tile tile = currentTile.GetAdjacentTile(horizontal == AdjacentDirection.None ? vertical : horizontal); //if the cursor isn't moving horizontally, move vertically
+                if (tile != null)
+                    StartCoroutine(SmoothMovement(tile)); //Traverse horizontally, then vertically
             }
-            else if (pressedInput == ControlsEnum.Null)
+            else if (pressedInput != ControlsEnum.Null)
             {
-                CursorContext context = new CursorContext(currentTile, CurrentCommander, currentTile.CurrentUnit, pressedInput);
+                CursorContext context = new CursorContext(currentTile, CurrentCommander, currentTile.CurrentUnit, pressedInput, UnlockCursor, LockCursor ) ;
                 CurrentCommander.ParseCursorOutput(context);
             }
         }
@@ -109,5 +105,23 @@ public class Cursor : MonoBehaviour
         currentTile = destinationTile;
         transform.position = currentTile.Position; //snap the position just in case the unit is slightly off
         moving = false;
+    }
+
+    public void JumpToTile(Tile _destinationTile)
+    {
+        currentTile = _destinationTile;
+        transform.position = currentTile.Position;
+    }
+
+    /// <summary>
+    /// Resets the flag locking the cursor. For use after an ActionManager is done parsing actions.
+    /// </summary>
+    public void UnlockCursor()
+    {
+        locked = false;
+    }
+    public void LockCursor()
+    {
+        locked = true;
     }
 }

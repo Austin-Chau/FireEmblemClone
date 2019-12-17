@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class _BoardManager : MonoBehaviour
+public class BoardManager : MonoBehaviour
 {
     //how wide and tall the level is (does not include the outer walls on the outside)
     public int columns = 12;
@@ -51,7 +51,7 @@ public class _BoardManager : MonoBehaviour
         return tileChoice;
     }
 
-    public Board SetupScene(Controller _controller)
+    public Board SetupScene()
     {
         board = new Board(rows, columns);
         Tiles = board.Tiles;

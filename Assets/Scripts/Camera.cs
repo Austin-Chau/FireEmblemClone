@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class _Camera : MonoBehaviour
+public class Camera : MonoBehaviour
 {
 
     //prefab to instantiate
@@ -14,7 +14,7 @@ public class _Camera : MonoBehaviour
     //create the gamemanager
     void Awake()
     {
-        if (_GameManager.instance == null)
+        if (GameManager.instance == null)
         {
             Instantiate(gameManager);
         }
@@ -22,7 +22,7 @@ public class _Camera : MonoBehaviour
 
     void Update()
     {
-        transform.SetPositionAndRotation(_GameManager.instance.cursorPosition, Quaternion.identity);
+        transform.SetPositionAndRotation(GameManager.instance.cursorPosition, Quaternion.identity);
         transform.Translate(zShift);
     }
 }
