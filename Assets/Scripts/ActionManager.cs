@@ -11,34 +11,10 @@ public abstract class ActionManager
     public bool autoTurn;
 
     /// <summary>
-    /// Given a unit and a tile, returns whether or not an action space was parsed.
-    /// Cases:
-    /// (0: no actionspace on the tile)
-    /// (1: unit is out of possible actions and is now spent)
-    /// (2: unit can still perform actions).
-    /// Also performs the action of that action space.
-    /// </summary>
-    public void ParseTile(Unit _unit, CursorContext _context, Action<bool, CursorContext> _commanderCallback)
-    {
-        if (!_unit.actionSpaces.ContainsKey(_context.currentTile) || _unit.actionSpaces[_context.currentTile] == null)
-        {
-            Debug.Log("Attempted to perform an action and failed. Releasing the cursor and parsing the space as a selection of a new unit.");
-            _context.releaseCursorCallback();
-            _commanderCallback(false, _context);
-        }
-        else
-        {
-            Debug.Log("Performing an action space.");
-            _unit.PerformAction(_context, _commanderCallback);
-        }
-
-    }
-
-    /// <summary>
     /// Given a unit and a list of actions that unit can take, does whatever behavior we wish.
     /// AI will pick one, player will talk with the GUI to pick one.
     /// </summary>
-    public abstract void ParseActions(Unit _unit, List<ActionNames> _actions, ParseActionsCallbackContainer _callbackContainer);
+    public abstract void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, ParseCommandCallbackContainer _callbackContainer);
 }
 
 public class BasicEnemy : ActionManager
@@ -48,9 +24,8 @@ public class BasicEnemy : ActionManager
         autoTurn = true;
     }
 
-    public override void ParseActions(Unit _unit, List<ActionNames> _actions, ParseActionsCallbackContainer _callbackContainer)
+    public override void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, ParseCommandCallbackContainer _callbackContainer)
     {
-        _callbackContainer.PerformActions();
         return;
     }
 
@@ -63,24 +38,25 @@ public class PlayerBehavior : ActionManager
         autoTurn = false;
     }
 
-    public override void ParseActions(Unit _unit, List<ActionNames> _actions, ParseActionsCallbackContainer _callbackContainer)
+    public override void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, ParseCommandCallbackContainer _callbackContainer)
     {
-        //Instead of GUI rn, just automatically starts movement or ends the unit's turn if it can't move
+        /*
+         * Goal: send this list of actions to the GUI.
+         */
         foreach (ActionNames action in _actions)
         {
             Debug.Log(action);
         }
         if (_actions.Contains(ActionNames.Move))
         {
-            _unit.GenerateActSpaces(ActionNames.Move);
+            _callbackContainer.payload.Initialize(CommandNames.InitializeMove, _unit, _targetTile, new object[0]);
+            _callbackContainer.PerformCallback();
         }
         else
         {
-            _unit.EndActions();
-            _callbackContainer.PerformActions();
+            _callbackContainer.payload.Initialize(CommandNames.EndTurn, _unit, _targetTile, new object[0]);
+            _callbackContainer.PerformCallback();
         }
-
-        _callbackContainer.unlockCursorCallback();
         return;
     }
 

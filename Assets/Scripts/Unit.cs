@@ -190,7 +190,6 @@ public class Unit : MonoBehaviour
             phaseActiveFlags[action] = false;
         }
         Spent = true;
-        commander.RetireUnit(this);
         EraseSpaces();
     }
 
@@ -241,7 +240,7 @@ public class Unit : MonoBehaviour
                     ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
                     moveSpaceScript.parentUnit = this;
                     moveSpaceScript.currentTile = pair.Key;
-                    moveSpaceScript.action = ActionNames.Move;
+                    moveSpaceScript.command = CommandNames.Move;
                     spaces[pair.Key] = moveSpaceScript;
                 }
                 break;
@@ -270,58 +269,55 @@ public class Unit : MonoBehaviour
 
     #region Actions
     /* 
-     * Your action should call "actionCallbackContainer.PerformCallback(false)" immediately if no action ends up being performed
-     * (I think that in this case, we should consider the input as the player interacting with the board and selecting units, which is what
-     * the callback does).
-     * Otherwise, you need to pass this actionCallbackContainer all the way to the end of the animation and call "actionCallbackContainer.PerformCallback(true)"
-     * when you are ready to return control to the cursor.
-     * 
-     * Then, you need to set up a case in the switch within PerformAction that calls your action's method if the actionspace has that action.
-     * Also, you need to set up GenerateActSpaces for the case of your action.
+     * Things needed to implemenet a new action:
+     * -in PerformAction, add a case for your action. It needs to pass actionCallbackContainer at the very least.
+     * -Call actionCallbackContainer.PerformCallback() at the very end of any animations/action, once control is ready to go back to the cursor.
+     * -actionCallbackContainer.PerformCallback() needs to be called if at any time the action ends, so control can be returned to the cursor. If you have some kind of interruption happening
+     * (like a new menu is popping up), then just make sure to continue to pass actionCallbackContainer until it can be called.
+     * -Go to Commander.parseCommand and add a case for what command should lead to your action (if your action results from a command)
+     * -Add the action to the ActionNames enum, and the various applicable CommandNames enum if need be
     */
 
     /// <summary>
-    /// The wrapper for performing an action. Returns whether or not the cursor should lock (aka, if a multi-frame action is being performed).
+    /// The wraper for performing an action.
     /// </summary>
     /// <returns></returns>
-    public void PerformAction(CursorContext _contextToPassToCommander, Action<bool, CursorContext> _commanderCallback)
+    public void PerformAction(ActionNames _actionName, Tile _targetTile, Action<Unit> _commanderCallback)
     {
-        Tile targetTile = _contextToPassToCommander.currentTile;
-        ActionCallbackContainer actionCallbackContainer = new ActionCallbackContainer(_contextToPassToCommander, _commanderCallback, EraseSpaces);
-        if (actionSpaces.ContainsKey(targetTile))
+        ActionCallbackContainer actionCallbackContainer = new ActionCallbackContainer(_commanderCallback, EraseSpaces, this);
+        switch (_actionName)
         {
-            ActionSpace tempSpace = actionSpaces[targetTile];
-            switch (tempSpace.action)
-            {
-                case (ActionNames.Move):
-                    MetaMove(targetTile, actionCallbackContainer);
-                    break;
-                default:
-                    break;
-            }
-        }
-        else
-        {
-            actionCallbackContainer.PerformCallback(false);
+            case (ActionNames.Move):
+                MetaMove(_targetTile, actionCallbackContainer);
+                return;
         }
     }
 
-    private struct ActionCallbackContainer
+    public struct ActionCallbackContainer
     {
-        public CursorContext context;
-        public Action<bool, CursorContext> commanderCallback;
-        public Action unitCallback;
+        Action<Unit> commanderCallback;
+        Action unitCallback;
+        Unit unit;
+        public Dictionary<Action<object[]>, object[]> arbitraryCallbacks;
 
-        public ActionCallbackContainer(CursorContext _context, Action<bool, CursorContext> _commanderCallback, Action _unitCallback)
+        public ActionCallbackContainer(Action<Unit> _commanderCallback, Action _unitCallback, Unit _unit)
         {
-            context = _context;
             commanderCallback = _commanderCallback;
             unitCallback = _unitCallback;
+            unit = _unit;
+            arbitraryCallbacks = new Dictionary<Action<object[]>, object[]>();
         }
-        public void PerformCallback(bool _wasActionPerformed)
+
+        public void PerformCallback()
         {
-            context.releaseCursorCallback();
-            commanderCallback(_wasActionPerformed, context);
+            if (arbitraryCallbacks.Count > 0)
+            {
+                foreach (KeyValuePair<Action<object[]>, object[]> pair in arbitraryCallbacks)
+                {
+                    pair.Key(pair.Value);
+                }
+            }
+            commanderCallback(unit);
             unitCallback();
         }
     }
@@ -385,7 +381,7 @@ public class Unit : MonoBehaviour
         }
         else
         {
-            _callbackContainer.PerformCallback(false);
+            _callbackContainer.PerformCallback();
         }
 
     }
@@ -409,7 +405,7 @@ public class Unit : MonoBehaviour
             phaseActiveFlags[ActionNames.Move] = false;
             currentTile.CurrentUnit = this;
         }
-        _callbackContainer.PerformCallback(true);
+        _callbackContainer.PerformCallback();
         phaseFlags[ActionNames.Move] = true;
     }
 

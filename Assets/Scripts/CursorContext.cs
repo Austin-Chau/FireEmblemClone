@@ -2,7 +2,7 @@
 
 public struct CursorContext
 {
-    public Tile currentTile { get; private set; }
+    public Tile currentTile { get; private set; } //unit needs to know this
     public Commander cursorCommander { get; private set; }
     public Unit targetUnit { get; private set; }
     public ControlsEnum inputButton { get; private set; }

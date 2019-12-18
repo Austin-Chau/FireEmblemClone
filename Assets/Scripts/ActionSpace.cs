@@ -6,7 +6,7 @@ public class ActionSpace : MonoBehaviour
 {
     public Unit parentUnit;
     public Tile currentTile;
-    public ActionNames action;
+    public CommandNames command;
 
     public void Delete()
     {

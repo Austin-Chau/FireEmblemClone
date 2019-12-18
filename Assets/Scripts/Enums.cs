@@ -6,6 +6,20 @@ public enum ActionNames
     Move,
     Attack
 }
+
+public enum CommandNames
+{
+    None,
+    InitializeMove,
+    GenerateMoveSpaces,
+    Move,
+    InitializeAttack,
+    Attack,
+    Cancel,
+    EndTurn,
+    Revert
+}
+
 public enum Team
 {
     Player1,
