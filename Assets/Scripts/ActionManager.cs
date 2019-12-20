@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System;
 using UnityEngine;
+using ParseCommandCallback;
+
 
 public abstract class ActionManager
 {
@@ -49,12 +51,14 @@ public class PlayerBehavior : ActionManager
         }
         if (_actions.Contains(ActionNames.Move))
         {
-            _callbackContainer.payload.Initialize(CommandNames.InitializeMove, _unit, _targetTile, new object[0]);
+            _callbackContainer.payload.Initialize(CommandNames.InitializeMove, _unit, _targetTile, new Action[] {_callbackContainer.releaseCursorCallback });
+            Debug.Log(_unit);
+            Debug.Log(_callbackContainer.payload.actingUnit);
             _callbackContainer.PerformCallback();
         }
         else
         {
-            _callbackContainer.payload.Initialize(CommandNames.EndTurn, _unit, _targetTile, new object[0]);
+            _callbackContainer.payload.Initialize(CommandNames.EndTurn, _unit, _targetTile, new Action[] { _callbackContainer.releaseCursorCallback });
             _callbackContainer.PerformCallback();
         }
         return;

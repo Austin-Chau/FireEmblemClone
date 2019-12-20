@@ -19,7 +19,25 @@ public class Unit : MonoBehaviour
     public Tile currentTile { get; private set; }
     public Tile pastTile { get; private set; }
     public Dictionary<Tile, ActionSpace> actionSpaces = new Dictionary<Tile, ActionSpace>();
-    public bool Spent { get; private set; }
+    public bool Spent
+    {
+        get
+        {
+            return spent;
+        }
+        private set
+        {
+            spent = value;
+            if (value)
+            {
+                transform.localRotation = Quaternion.Euler(0, 180, 180);
+            }
+            else
+            {
+                transform.localRotation = Quaternion.Euler(0, 0, 0);
+            }
+        }
+    }
 
     public Team team { get; private set; }
     public Commander commander { get; private set; }
@@ -32,7 +50,7 @@ public class Unit : MonoBehaviour
     private Rigidbody2D rb2D;
 
     private float inverseMoveTime;
-
+    private bool spent;
 
 
     private Dictionary<Tile, int> moveTree;

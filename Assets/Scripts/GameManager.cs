@@ -60,7 +60,8 @@ public class GameManager : MonoBehaviour
         Board = BoardScript.SetupScene();
         Commander tempCommander = new Commander(Team.Player1, new PlayerBehavior());
         Commanders.Add(tempCommander);
-        tempCommander.SpawnAndAddUnit(Board.Tiles[0, 0], Instantiate(UnitPrefab, new Vector3(0,0,0),Quaternion.identity).GetComponent<Unit>());
+        tempCommander.SpawnAndAddUnit(Board.Tiles[0, 0], Instantiate(UnitPrefab, new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Unit>());
+        tempCommander.SpawnAndAddUnit(Board.Tiles[1, 3], Instantiate(UnitPrefab, new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Unit>());
         CurrentCommander = tempCommander;
 
         tempCommander = new Commander(Team.Player2, new PlayerBehavior());

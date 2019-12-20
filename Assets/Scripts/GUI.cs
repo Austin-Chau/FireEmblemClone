@@ -10,6 +10,19 @@ public class GUI : MonoBehaviour
     public GameObject upperRightText;
     private Text actionText;
     private Text turnText;
+    public Unit SelectedUnit
+    {
+        get
+        {
+            return selectedUnit;
+        }
+        set
+        {
+            UpdateSelectedUnit(value);
+            selectedUnit = value;
+        }
+    }
+    private Unit selectedUnit;
     private Dictionary<Team, string> teamNames = new Dictionary<Team, string>
     {
         {Team.Player1, "Player One" },
