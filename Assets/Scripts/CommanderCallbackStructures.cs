@@ -11,12 +11,15 @@ namespace ParseCommandCallback
         public ParseCommandCallbackContainer(Action<ParseCommandPayload> _parseCommand, Action _releaseCursorCallback)
         {
             parseCommand = _parseCommand;
-            payload = new ParseCommandPayload();
             releaseCursorCallback = _releaseCursorCallback;
         }
         public void PerformCallback()
         {
             parseCommand(payload);
+        }
+        public void GeneratePayload(CommandNames _commandName, Unit _actingUnit, Tile _targetTile, Action[] _callbacks, object[] _parameters)
+        {
+            payload = new ParseCommandPayload(_commandName, _actingUnit, _targetTile, _callbacks, _parameters);
         }
 
     }
@@ -28,23 +31,13 @@ namespace ParseCommandCallback
         public object[] parameters { get; private set; }
         public Action[] callbacks { get; private set; }
 
-        public ParseCommandPayload Initialize(CommandNames _commandName, Unit _actingUnit, Tile _targetTile, Action[] _callbacks, object[] _parameters)
+        public ParseCommandPayload(CommandNames _commandName, Unit _actingUnit, Tile _targetTile, Action[] _callbacks, object[] _parameters)
         {
             commandName = _commandName;
             parameters = _parameters;
             actingUnit = _actingUnit;
             targetTile = _targetTile;
             callbacks = _callbacks;
-            return this;
-        }
-        public ParseCommandPayload Initialize(CommandNames _commandName, Unit _actingUnit, Tile _targetTile, Action[] _callbacks)
-        {
-            commandName = _commandName;
-            actingUnit = _actingUnit;
-            targetTile = _targetTile;
-            callbacks = _callbacks;
-
-            return this;
         }
         public void PerformCallbacks()
         {

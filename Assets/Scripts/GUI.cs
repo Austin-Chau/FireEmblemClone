@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,8 +6,10 @@ using UnityEngine.UI;
 public class GUI : MonoBehaviour
 {
     public GameObject textPrefab;
+    public GameObject menuEntryPrefab;
     public GameObject upperLeftText;
     public GameObject upperRightText;
+    private GameObject commandMenu;
     private Text actionText;
     private Text turnText;
     public Unit SelectedUnit
@@ -57,8 +59,10 @@ public class GUI : MonoBehaviour
 
         turnText = upperLeftText.GetComponent<Text>();
         turnText.alignment = TextAnchor.MiddleLeft;
-    }
 
+        commandMenu = transform.Find("CommandMenu").gameObject;
+
+    }
     public void UpdateSelectedUnit(Unit _unit)
     {
         if (_unit == null)
@@ -67,7 +71,7 @@ public class GUI : MonoBehaviour
         }
         else
         {
-            actionText.text = "A unit of " + teamNames[_unit.team] + " is selected";
+            actionText.text = "A unit of " + teamNames[_unit.Team] + " is selected";
         }
     }
 
@@ -81,5 +85,25 @@ public class GUI : MonoBehaviour
         {
             turnText.text = teamNames[_commander.Team] + "'s turn";
         }
+    }
+
+    public void StartCommandMenu(List<Tuple<string, Action>> ListOfEntries)
+    {
+        foreach (Transform child in commandMenu.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        List<Tuple<GameObject, Action>> listOfEntries = new List<Tuple<GameObject, Action>>();
+
+        foreach (Tuple<string, Action> entry in ListOfEntries)
+        {
+            GameObject tempEntry = Instantiate(menuEntryPrefab, new Vector3(0, 0, 0), Quaternion.identity, commandMenu.transform);
+            GameObject tempEntryText = tempEntry.transform.Find("Text").gameObject;
+            tempEntryText.GetComponent<Text>().text = entry.Item1;
+            listOfEntries.Add(new Tuple<GameObject,Action>(tempEntryText,entry.Item2));
+        }
+        commandMenu.GetComponent<CommandMenuScript>().SetEntries(listOfEntries);
+        commandMenu.SetActive(true);
     }
 }

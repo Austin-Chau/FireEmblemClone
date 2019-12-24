@@ -45,23 +45,47 @@ public class PlayerBehavior : ActionManager
         /*
          * Goal: send this list of actions to the GUI.
          */
+        Action[] callbacks;
+        Action callbackForMenu;
+        Tuple<string, Action> tuple;
+
+        List<Tuple<string, Action>> listOfEntries = new List<Tuple<string, Action>>();
         foreach (ActionNames action in _actions)
         {
             Debug.Log(action);
+            callbacks = new Action[] { _callbackContainer.releaseCursorCallback };
+            callbackForMenu =
+                () => {
+                    _callbackContainer.GeneratePayload(ActionsToCommands[action], _unit, _targetTile, callbacks, new object[0]);
+                    _callbackContainer.PerformCallback();
+                };
+            tuple = new Tuple<string, Action>(ActionsToCommandMenuString[action], callbackForMenu);
+            listOfEntries.Add(tuple);
         }
-        if (_actions.Contains(ActionNames.Move))
-        {
-            _callbackContainer.payload.Initialize(CommandNames.InitializeMove, _unit, _targetTile, new Action[] {_callbackContainer.releaseCursorCallback });
-            Debug.Log(_unit);
-            Debug.Log(_callbackContainer.payload.actingUnit);
-            _callbackContainer.PerformCallback();
-        }
-        else
-        {
-            _callbackContainer.payload.Initialize(CommandNames.EndTurn, _unit, _targetTile, new Action[] { _callbackContainer.releaseCursorCallback });
-            _callbackContainer.PerformCallback();
-        }
+
+        callbacks = new Action[] { _callbackContainer.releaseCursorCallback };
+        callbackForMenu =
+            () => {
+                _callbackContainer.GeneratePayload(CommandNames.EndTurn, _unit, _targetTile, callbacks, new object[0]);
+                _callbackContainer.PerformCallback();
+            };
+        tuple = new Tuple<string, Action>("Wait", callbackForMenu);
+        listOfEntries.Add(tuple);
+
+        GameManager.instance.GUI.StartCommandMenu(listOfEntries);
         return;
     }
+
+    private Dictionary<ActionNames, string> ActionsToCommandMenuString = new Dictionary<ActionNames, string>()
+    {
+        { ActionNames.Move, "Move" },
+        { ActionNames.Attack, "Attack (currently broken)"}
+    };
+
+    private Dictionary<ActionNames, CommandNames> ActionsToCommands = new Dictionary<ActionNames, CommandNames>()
+    {
+        { ActionNames.Move, CommandNames.InitializeMove },
+        { ActionNames.Attack, CommandNames.InitializeAttack }
+    };
 
 }

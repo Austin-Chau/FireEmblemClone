@@ -78,7 +78,7 @@ public class Cursor : MonoBehaviour
                     vertical = AdjacentDirection.Down;
                 }
                 Tile tile = currentTile.GetAdjacentTile(horizontal == AdjacentDirection.None ? vertical : horizontal); //if the cursor isn't moving horizontally, move vertically
-                if (tile != null)
+                if (tile != null && tile != currentTile)
                     StartCoroutine(SmoothMovement(tile)); //Traverse horizontally, then vertically
             }
             else if (pressedInput != ControlsEnum.Null)
@@ -119,9 +119,11 @@ public class Cursor : MonoBehaviour
     public void UnlockCursor()
     {
         locked = false;
+        Debug.Log("unlocking cursor");
     }
     public void LockCursor()
     {
         locked = true;
+        Debug.Log("locking cursor");
     }
 }

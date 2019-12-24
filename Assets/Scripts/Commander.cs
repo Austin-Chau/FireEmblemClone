@@ -7,10 +7,8 @@ using ParseCommandCallback;
 public class Commander
 {
     public Team Team { get; private set; }
-
+    public GameManager GameManager;
     public List<Unit> Units = new List<Unit>();
-    private List<Unit> actableUnits = new List<Unit>(); //a list to keep track of which units still need to move
-    public UnitsTracker UnitsTracker { get; private set; }
     public ActionManager ActionManager { get; private set; }
     public bool MyTurn { get; private set; }
 
@@ -22,7 +20,6 @@ public class Commander
         }
         set
         {
-            Debug.Log(value);
             GameManager.instance.GUI.SelectedUnit = value;
             selectedUnit = value;
         }
@@ -30,23 +27,11 @@ public class Commander
     private Unit selectedUnit;
 
     /// <summary>
-    /// Returns a tuple containing the unit, and the action that is currently expected to be performed.
-    /// </summary>
-    public Unit CurrentUnit
-    {
-        get
-        {
-            return UnitsTracker.Current;
-        }
-    }
-
-    /// <summary>
     /// Sets the team and behavior of this controller. 
     /// </summary>
     /// <param name="_team">The team</param>
     public Commander(Team _team, ActionManager _actionManager)
     {
-        UnitsTracker = new UnitsTracker();
         Team = _team;
         ActionManager = _actionManager;
     }
@@ -65,13 +50,15 @@ public class Commander
         {
             case ControlsEnum.Confirm:
                 Debug.Log("Confirm has been pressed:");
+                /*
                 Debug.Log(SelectedUnit != null);
                 Debug.Log(SelectedUnit != null && !SelectedUnit.IsPerformingAction());
                 Debug.Log(SelectedUnit != null && SelectedUnit.commander == this);
                 Debug.Log(SelectedUnit != null && SelectedUnit.actionSpaces.ContainsKey(_cursorContext.currentTile));
+                */
                 if (SelectedUnit != null && //we have a SelectedUnit
                     !SelectedUnit.IsPerformingAction() && //it is not in the middle of an action
-                    SelectedUnit.commander == this && //it is our unit
+                    SelectedUnit.Commander == this && //it is our unit
                     SelectedUnit.actionSpaces.ContainsKey(_cursorContext.currentTile)) //the tile we are selecting is an actionspace
                 {
                     Debug.Log(">parsing tile as an actionspace.");
@@ -89,7 +76,7 @@ public class Commander
                 Debug.Log("Reverse has been pressed.");
                 if (SelectedUnit != null && !SelectedUnit.IsPerformingAction())
                 {
-                    ParseCommand(new ParseCommandPayload().Initialize(CommandNames.Revert, SelectedUnit, null, new Action[] { _cursorContext.releaseCursorCallback }));
+                    ParseCommand(new ParseCommandPayload(CommandNames.Revert, SelectedUnit, null, new Action[] { _cursorContext.releaseCursorCallback }, new object[0]));
                     SelectedUnit = null;
                 }
                 break;
@@ -101,6 +88,7 @@ public class Commander
 
     private void SwitchSelectedUnit(CursorContext _context)
     {
+        Debug.Log("switching selected units from "+ SelectedUnit);
         if (SelectedUnit == _context.currentTile.CurrentUnit)
         {
             Debug.Log("Unit on the tile is the same as SelectedUnit, nothing is done.");
@@ -109,7 +97,7 @@ public class Commander
         _context.lockCursorCallback();
         Debug.Log("Unit on the tile is different than SelectedUnit, time to switch selection.");
         if (SelectedUnit != null)
-            ParseCommand(new ParseCommandPayload().Initialize(CommandNames.Cancel, SelectedUnit, null, new Action[] { _context.releaseCursorCallback }));
+            ParseCommand(new ParseCommandPayload(CommandNames.Cancel, SelectedUnit, null, new Action[] { _context.releaseCursorCallback }, new object[0]));
 
         SelectedUnit = _context.currentTile.CurrentUnit;
         if (SelectedUnit == null)
@@ -118,10 +106,10 @@ public class Commander
             _context.releaseCursorCallback();
             return;
         }
-        else if (SelectedUnit.commander != this)
+        else if (SelectedUnit.Commander != this)
         {
             Debug.Log(">the unit on the tile is not ours, we assume this means the player wants to see the move spaces.");
-            ParseCommand(new ParseCommandPayload().Initialize(CommandNames.GenerateMoveSpaces, SelectedUnit, _context.currentTile, new Action[] { _context.releaseCursorCallback }));
+            ParseCommand(new ParseCommandPayload(CommandNames.GenerateMoveSpaces, SelectedUnit, _context.currentTile, new Action[] { _context.releaseCursorCallback }, new object[0]));
         }
         else if (!SelectedUnit.Spent)
         {
@@ -146,7 +134,7 @@ public class Commander
         else
         {
             Debug.Log("Performing an action space.");
-            ParseCommand(new ParseCommandPayload().Initialize(_unit.actionSpaces[_context.currentTile].command, SelectedUnit, _context.currentTile, new Action[] { _context.releaseCursorCallback }));
+            ParseCommand(new ParseCommandPayload(_unit.actionSpaces[_context.currentTile].command, SelectedUnit, _context.currentTile, new Action[] { _context.releaseCursorCallback }, new object[0]));
         }
     }
     #endregion
@@ -155,98 +143,15 @@ public class Commander
     public void StartTurn()
     {
         MyTurn = true;
-        actableUnits = new List<Unit>();
         SelectedUnit = null;
-        foreach (Unit unit in Units)
-        {
-            unit.ResetStates();
-            actableUnits.Add(unit);
-        }
-        UnitsTracker.Initialize(Units.ToArray());
     }
 
-    /// <summary>
-    /// Called by the child unit to indicate that it has finished its current action and is ready to perform the next.
-    /// Checks if the unit's turn should end, and if the controller's turn should end.
-    /// </summary>
-    public void StepTurn() 
+    public void EndTurn()
     {
-
-    }
-
-    private void EndTurn()
-    {
-        Debug.Log(Team + " is ending its turn");
         MyTurn = false;
-        GameManager.instance.PassTurn();
-    }
-    #endregion
-
-    #region Roster Controls
-    /// <summary>
-    /// Adds a unit to this controllers list of units while setting its spawn tile.
-    /// </summary>
-    /// <param name="_spawnTile">The tile to spawn at</param>
-    /// <param name="_unit">A reference to an instantiated unit monobehavior</param>
-    /// <returns>True if successful, false otherwise.</returns>
-    public bool SpawnAndAddUnit(Tile _spawnTile, Unit _unit)
-    {
-        if (Units.Contains(_unit))
-        {
-            return false;
-        }
-        Units.Add(_unit);
-        actableUnits.Add(_unit);
-        _unit.InitializeUnit(_spawnTile, Team, this);
-        UnitsTracker.UpdateUnits(Units.ToArray());
-        return true;
+        SelectedUnit = null;
     }
 
-    /// <summary>
-    /// Adds a unit to this controllers list of units while not changing its spawn tile.
-    /// </summary>
-    /// <param name="_unit"></param>
-    /// <returns>True if successful, false otherwise.</returns>
-    public bool AddUnit(Unit _unit)
-    {
-        if (Units.Contains(_unit))
-        {
-            return false;
-        }
-        Units.Add(_unit);
-        actableUnits.Add(_unit);
-        _unit.InitializeUnit(_unit.currentTile, Team, this);
-        UnitsTracker.UpdateUnits(Units.ToArray());
-        return true;
-    }
-
-    /// <summary>
-    /// Removes a unit from the active list of units and checks if it is now empty, signalling the end of a turn. Returns true in that case.
-    /// </summary>
-    /// <param name="_unit"></param>
-    /// <returns>True if the turn is ending, false otherwise.</returns>
-    public void RetireUnit(Unit _unit)
-    {
-        actableUnits.Remove(_unit);
-        if (actableUnits.Count < 1)
-        {
-            Debug.Log("Retired a unit, and now the controller is out of units");
-            EndTurn();
-            return;
-        }
-        Debug.Log("Retired a unit, but the controller has more");
-    }
-
-    /// <summary>
-    /// Removes a unit from this controllers list of units. An indefinite change of which team it is on.
-    /// </summary>
-    /// <param name="_unit">Reference to the unit to be removed.</param>
-    /// <returns>True if successful, false otherwise.</returns>
-    public bool RemoveUnit(Unit _unit)
-    {
-        actableUnits.Remove(_unit);
-        return Units.Remove(_unit);
-    }
     #endregion
 
     #region Command Parsing
@@ -259,16 +164,16 @@ public class Commander
         switch (_payload.commandName)
         {
             case CommandNames.Move:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit, true); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { SucceededAction(_unit); DeselectUnit();  _payload.PerformCallbacks(); };
                 _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Move], _payload.targetTile, actionFinishedCallback);
                 return;
             case CommandNames.InitializeMove:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit, false); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.GenerateMoveSpaces:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit, false); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
@@ -277,17 +182,17 @@ public class Commander
             case CommandNames.InitializeAttack:
                 return;
             case CommandNames.EndTurn:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit, false); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { SucceededAction(_unit); DeselectUnit();  _payload.PerformCallbacks(); };
                 _payload.actingUnit.EndActions();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Cancel:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit, false); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
                 _payload.actingUnit.EraseSpaces();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Revert:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit, false); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
                 _payload.actingUnit.EraseSpaces();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
@@ -308,17 +213,17 @@ public class Commander
     /// <summary>
     /// Called after a unit finishes their action.
     /// </summary>
-    public void SucceededAction(Unit _unit, bool _deselectAfterAction)
+    public void SucceededAction(Unit _unit)
     {
-        Debug.Log("successful action");
         if (_unit.QueryEndOfTurn())
         {
-            RetireUnit(_unit);
+            GameManager.RetireUnit(_unit);
         }
-        if (_deselectAfterAction && SelectedUnit == _unit)
-        {
-            SelectedUnit = null;
-        }
+    }
+
+    public void DeselectUnit()
+    {
+        SelectedUnit = null;
     }
 
     #endregion

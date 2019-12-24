@@ -39,8 +39,28 @@ public class Unit : MonoBehaviour
         }
     }
 
-    public Team team { get; private set; }
-    public Commander commander { get; private set; }
+    public Team Team { get; private set; }
+    public Commander Commander
+    {
+        get
+        {
+            return commander;
+        }
+        set
+        {
+            if (value != null)
+            {
+                Team = value.Team;
+                commander = value;
+            }
+            else
+            {
+                Team = Team.None;
+                commander = null;
+            }
+        }
+    }
+    private Commander commander;
 
     #endregion
 
@@ -99,21 +119,21 @@ public class Unit : MonoBehaviour
     /// Sets all of the passed parameters while also moving the unit to the position of its tile.
     /// </summary>
     /// <param name="_spawnTile">The tile the unit should be on.</param>
-    /// <param name="_team">What team the unit is on.</param>
-    /// <param name="_controller">The controller that controls this unit.</param>
-    public void InitializeUnit(Tile _spawnTile, Team _team, Commander _commander)
+    /// <param name="_commander">The commander that commands this unit.</param>
+    public Unit InitializeUnit(Tile _spawnTile, Commander _commander)
     {
-        team = _team;
-        if (team == Team.Enemy)
+
+        if (_commander.Team == Team.Player2)
         {
             GetComponent<SpriteRenderer>().flipX = true;
         }
-        commander = _commander;
+        Commander = _commander;
         currentTile = _spawnTile;
         pastTile = currentTile;
         transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
         ResetStates();
+        return this;
     }
 
     #region Data Access Methods

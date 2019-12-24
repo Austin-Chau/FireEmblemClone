@@ -22,6 +22,7 @@ public enum CommandNames
 
 public enum Team
 {
+    None,
     Player1,
     Player2,
     Enemy
