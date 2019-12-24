@@ -94,10 +94,11 @@ public class Commander
             Debug.Log("Unit on the tile is the same as SelectedUnit, nothing is done.");
             return;
         }
-        _context.lockCursorCallback();
         Debug.Log("Unit on the tile is different than SelectedUnit, time to switch selection.");
         if (SelectedUnit != null)
             ParseCommand(new ParseCommandPayload(CommandNames.Cancel, SelectedUnit, null, new Action[] { _context.releaseCursorCallback }, new object[0]));
+
+        _context.lockCursorCallback();
 
         SelectedUnit = _context.currentTile.CurrentUnit;
         if (SelectedUnit == null)
@@ -117,6 +118,10 @@ public class Commander
             List<ActionNames> possibleActions = SelectedUnit.GetAllPossibleActions();
             ParseCommandCallbackContainer parseCommandCallbackContainer = new ParseCommandCallbackContainer(ParseCommand, _context.releaseCursorCallback);
             ActionManager.DecideOnACommand(SelectedUnit, _context.currentTile, possibleActions, parseCommandCallbackContainer);
+        }
+        else
+        {
+            _context.releaseCursorCallback();
         }
     }
 
