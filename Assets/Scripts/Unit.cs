@@ -260,6 +260,14 @@ public class Unit : MonoBehaviour
     }
 
     /// <summary>
+    /// Allows other objects to easily set hit trigger.
+    /// </summary>
+    public void SetHitTrigger()
+    {
+        animator.SetTrigger("playerHit");
+    }
+
+    /// <summary>
     /// Generates the act spaces for a specific action.
     /// </summary>
     /// <param name="_action">the action to generate for</param>
@@ -480,15 +488,18 @@ public class Unit : MonoBehaviour
     {
         phaseFlags[ActionNames.Attack] = true;
 
-        Vector2Int dir = Pathfinding.GetTileDirectionVector(currentTile, Board.Instance.Tiles[5,5]);
+        Vector2Int dir = Pathfinding.GetTileDirectionVector(currentTile, _tile);
+
 
         animator.SetFloat("AttackY", dir.y);
         animator.SetFloat("AttackX", dir.x);
 
         //Behaviour will perform callback after animation exit
         animator.GetBehaviour<PlayerAttackBehaviour>().callbackContainer = _callbackContainer;
+
         animator.SetTrigger("playerAttack");
-        
+        _tile.CurrentUnit.SetHitTrigger();
+
 
     }
     #endregion
