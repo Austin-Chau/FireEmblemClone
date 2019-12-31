@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,10 +12,11 @@ public class GameManager : MonoBehaviour
     public GameObject CursorPrefab;
     public GameObject GUIPrefab;
 
+    public Camera Camera;
     public Board Board;
     public Cursor Cursor { get; private set; }
     public GUI GUI { get; private set; }
-    public Vector3 cursorPosition = new Vector3(0, 0, 0);
+
     public List<Commander> Commanders { get; private set; }
 
     public Commander CurrentCommander { get; private set; }
@@ -25,8 +26,14 @@ public class GameManager : MonoBehaviour
     #region Private Variables
     private Dictionary<Commander, List<Unit>> unitRosters = new Dictionary<Commander, List<Unit>>();
     private List<Unit> remainingActableUnits;
+    private bool inputLocked;
     private int commanderIndex = 0;
     private bool doingSetup = true;
+
+    private AdjacentDirection persistantInputDirection = AdjacentDirection.None;
+    private const int menuTimerMax = 30;
+    private const int menuTimerDelay = 5;
+    private int menuTimer = menuTimerMax;
     #endregion
 
     #region Constants
@@ -75,7 +82,6 @@ public class GameManager : MonoBehaviour
         Commanders.Add(tempCommander);
         SpawnAndAddUnit(Board.Tiles[5, 5], tempCommander);
 
-        Cursor.CurrentCommander = CurrentCommander;
         Cursor.JumpToTile(unitRosters[CurrentCommander][0].currentTile);
         GUI.UpdateCurrentTeam(CurrentCommander);
         remainingActableUnits = new List<Unit>();
@@ -92,6 +98,7 @@ public class GameManager : MonoBehaviour
     public void PassTurn()
     {
         Debug.Log("passing turn -------------");
+        inputLocked = true;
         CurrentCommander.EndTurn();
         commanderIndex++;
         if (commanderIndex >= Commanders.Count)
@@ -100,9 +107,8 @@ public class GameManager : MonoBehaviour
         }
         Debug.Log("Now going to be commander " + commanderIndex + "'s turn");
         CurrentCommander = Commanders[commanderIndex];
-        Cursor.UnlockCursor();
-        Cursor.CurrentCommander = CurrentCommander;
         Cursor.JumpToTile(unitRosters[CurrentCommander][0].currentTile);
+        Camera.MoveToCursor();
         GUI.UpdateCurrentTeam(CurrentCommander);
         remainingActableUnits = new List<Unit>();
         foreach (Unit unit in unitRosters[CurrentCommander])
@@ -111,6 +117,8 @@ public class GameManager : MonoBehaviour
             unit.ResetStates();
         }
         CurrentCommander.StartTurn();
+        Action callback = () => { inputLocked = false; };
+        GUI.TurnBanner(CurrentCommander, callback);
     }
 
     /// <summary>
@@ -120,7 +128,9 @@ public class GameManager : MonoBehaviour
     /// <returns>True if the turn is ending, false otherwise.</returns>
     public void RetireUnit(Unit _unit)
     {
-        remainingActableUnits.Remove(_unit);
+        if (!remainingActableUnits.Remove(_unit))
+            return;
+
         if (remainingActableUnits.Count < 1)
         {
             Debug.Log("Retired a unit, and now the commander is out of units.");
@@ -190,5 +200,76 @@ public class GameManager : MonoBehaviour
         }
         _unit.Commander = null;
         return unitRosters[_commander].Remove(_unit);
+    }
+
+    public Vector3 CursorPosition()
+    {
+        return Cursor.transform.position;
+    }
+
+    private void Update()
+    {
+        if (inputLocked)
+            return;
+
+        float x = Input.GetAxisRaw("Horizontal") * Time.deltaTime;
+        float y = Input.GetAxisRaw("Vertical") * Time.deltaTime;
+        AdjacentDirection direction = AdjacentDirection.None;
+
+        ControlsEnum pressedInput = ControlsEnum.Null;
+        if (Input.GetButtonDown("confirm"))
+        {
+            pressedInput = ControlsEnum.Confirm;
+        }
+        else if (Input.GetButtonDown("reverse"))
+        {
+            pressedInput = ControlsEnum.Reverse;
+        }
+        else if (Input.GetButtonDown("openMainMenu"))
+        {
+            pressedInput = ControlsEnum.OpenMainMenu;
+        }
+
+        if (Mathf.Abs(x) > Mathf.Epsilon)
+            direction = x > 0 ? AdjacentDirection.Right : AdjacentDirection.Left;
+        else if (Mathf.Abs(y) > Mathf.Epsilon)
+            direction = y > 0 ? AdjacentDirection.Up : AdjacentDirection.Down;
+
+        if (GUI.InANavigatableMenu())
+        {
+            switch (pressedInput)
+            {
+                case ControlsEnum.Confirm:
+                    GUI.ActivateCursor();
+                    break;
+                case ControlsEnum.Reverse:
+                    GUI.ReverseMenu();
+                    break;
+                default:
+                    GUI.MoveCursor(direction);
+                    break;
+            }
+        }
+        else if (!Cursor.Moving)
+        {
+            if (direction != AdjacentDirection.None)
+            {
+                Cursor.Move(direction);
+            }
+            else if (pressedInput != ControlsEnum.Null)
+            {
+                void UnlockInput() { inputLocked = false; }
+                void LockInput() { inputLocked = true; }
+                CursorContext context = new CursorContext(Cursor.CurrentTile, CurrentCommander, Cursor.CurrentTile.CurrentUnit, pressedInput, UnlockInput, LockInput);
+                CurrentCommander.ParseCursorOutput(context);
+            }
+        }
+
+        switch (pressedInput)
+        {
+            case ControlsEnum.OpenMainMenu:
+                GUI.StartMainMenu();
+                break;
+        }
     }
 }

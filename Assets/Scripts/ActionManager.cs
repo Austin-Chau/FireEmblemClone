@@ -46,33 +46,38 @@ public class PlayerBehavior : ActionManager
          * Goal: send this list of actions to the GUI.
          */
         Action[] callbacks;
-        Action callbackForMenu;
+        Action endTurnCallback;
         Tuple<string, Action> tuple;
 
         List<Tuple<string, Action>> listOfEntries = new List<Tuple<string, Action>>();
         foreach (ActionNames action in _actions)
         {
             Debug.Log(action);
-            callbacks = new Action[] { _callbackContainer.releaseCursorCallback };
-            callbackForMenu =
+            callbacks = new Action[] { _callbackContainer.releaseInputCallback };
+            endTurnCallback =
                 () => {
-                    _callbackContainer.GeneratePayload(ActionsToCommands[action], _unit, _targetTile, callbacks, new object[0]);
-                    _callbackContainer.PerformCallback();
+                    ParseCommandPayload tempPayload = new ParseCommandPayload(ActionsToCommands[action], _unit, _targetTile, callbacks, new object[0]);
+                    _callbackContainer.PerformCallback(tempPayload);
                 };
-            tuple = new Tuple<string, Action>(ActionsToCommandMenuString[action], callbackForMenu);
+            tuple = new Tuple<string, Action>(ActionsToCommandMenuString[action], endTurnCallback);
             listOfEntries.Add(tuple);
         }
 
-        callbacks = new Action[] { _callbackContainer.releaseCursorCallback };
-        callbackForMenu =
+        callbacks = new Action[] { _callbackContainer.releaseInputCallback };
+        endTurnCallback =
             () => {
-                _callbackContainer.GeneratePayload(CommandNames.EndTurn, _unit, _targetTile, callbacks, new object[0]);
-                _callbackContainer.PerformCallback();
+                ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.EndTurn, _unit, _targetTile, callbacks, new object[0]);
+                _callbackContainer.PerformCallback(tempPayload);
             };
-        tuple = new Tuple<string, Action>("Wait", callbackForMenu);
+        tuple = new Tuple<string, Action>("Wait", endTurnCallback);
         listOfEntries.Add(tuple);
 
-        GameManager.instance.GUI.StartCommandMenu(listOfEntries);
+        Action reverseCallback =
+            () => {
+                ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.Revert, _unit, _targetTile, callbacks, new object[0]);
+                _callbackContainer.PerformCallback(tempPayload);
+            };
+        GameManager.instance.GUI.StartCommandMenu(listOfEntries, reverseCallback);
         return;
     }
 

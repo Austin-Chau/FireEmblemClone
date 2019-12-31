@@ -62,7 +62,6 @@ public class Commander
                     SelectedUnit.actionSpaces.ContainsKey(_cursorContext.currentTile)) //the tile we are selecting is an actionspace
                 {
                     Debug.Log(">parsing tile as an actionspace.");
-                    _cursorContext.lockCursorCallback();
                     ParseTile(SelectedUnit, _cursorContext);
                 }
                 else
@@ -71,12 +70,11 @@ public class Commander
                     SwitchSelectedUnit(_cursorContext);
                 }
                 break;
-
             case ControlsEnum.Reverse:
                 Debug.Log("Reverse has been pressed.");
                 if (SelectedUnit != null && !SelectedUnit.IsPerformingAction())
                 {
-                    ParseCommand(new ParseCommandPayload(CommandNames.Revert, SelectedUnit, null, new Action[] { _cursorContext.releaseCursorCallback }, new object[0]));
+                    ParseCommand(new ParseCommandPayload(CommandNames.Revert, SelectedUnit, null, new Action[] { _cursorContext.releaseInputCallback }, new object[0]));
                     SelectedUnit = null;
                 }
                 break;
@@ -96,32 +94,25 @@ public class Commander
         }
         Debug.Log("Unit on the tile is different than SelectedUnit, time to switch selection.");
         if (SelectedUnit != null)
-            ParseCommand(new ParseCommandPayload(CommandNames.Cancel, SelectedUnit, null, new Action[] { _context.releaseCursorCallback }, new object[0]));
-
-        _context.lockCursorCallback();
+            ParseCommand(new ParseCommandPayload(CommandNames.Cancel, SelectedUnit, null, new Action[] { _context.releaseInputCallback }, new object[0]));
 
         SelectedUnit = _context.currentTile.CurrentUnit;
         if (SelectedUnit == null)
         {
             Debug.Log("> no unit on the tile, we are done deselecting.");
-            _context.releaseCursorCallback();
             return;
         }
         else if (SelectedUnit.Commander != this)
         {
             Debug.Log(">the unit on the tile is not ours, we assume this means the player wants to see the move spaces.");
-            ParseCommand(new ParseCommandPayload(CommandNames.GenerateMoveSpaces, SelectedUnit, _context.currentTile, new Action[] { _context.releaseCursorCallback }, new object[0]));
+            ParseCommand(new ParseCommandPayload(CommandNames.GenerateMoveSpaces, SelectedUnit, _context.currentTile, new Action[] { _context.releaseInputCallback }, new object[0]));
         }
         else if (!SelectedUnit.Spent)
         {
             Debug.Log(">this is our unit, and it is not spent, so we shall start using it. Actionmanager shall now pick a command and run it through ParseCommand.");
             List<ActionNames> possibleActions = SelectedUnit.GetAllPossibleActions();
-            ParseCommandCallbackContainer parseCommandCallbackContainer = new ParseCommandCallbackContainer(ParseCommand, _context.releaseCursorCallback);
+            ParseCommandCallbackContainer parseCommandCallbackContainer = new ParseCommandCallbackContainer(ParseCommand, _context.releaseInputCallback, _context.lockInputCallback);
             ActionManager.DecideOnACommand(SelectedUnit, _context.currentTile, possibleActions, parseCommandCallbackContainer);
-        }
-        else
-        {
-            _context.releaseCursorCallback();
         }
     }
 
@@ -139,7 +130,8 @@ public class Commander
         else
         {
             Debug.Log("Performing an action space.");
-            ParseCommand(new ParseCommandPayload(_unit.actionSpaces[_context.currentTile].command, SelectedUnit, _context.currentTile, new Action[] { _context.releaseCursorCallback }, new object[0]));
+            _context.lockInputCallback();
+            ParseCommand(new ParseCommandPayload(_unit.actionSpaces[_context.currentTile].command, SelectedUnit, _context.currentTile, new Action[] { _context.releaseInputCallback }, new object[0]));
         }
     }
     #endregion
@@ -169,16 +161,16 @@ public class Commander
         switch (_payload.commandName)
         {
             case CommandNames.Move:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit); DeselectUnit();  _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { DeselectUnit();  _payload.PerformCallbacks(); SucceededAction(_unit); };
                 _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Move], _payload.targetTile, actionFinishedCallback);
                 return;
             case CommandNames.InitializeMove:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); SucceededAction(_unit); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.GenerateMoveSpaces:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); SucceededAction(_unit); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
@@ -187,17 +179,17 @@ public class Commander
             case CommandNames.InitializeAttack:
                 return;
             case CommandNames.EndTurn:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit); DeselectUnit();  _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
                 _payload.actingUnit.EndActions();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Cancel:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
                 _payload.actingUnit.EraseSpaces();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Revert:
-                actionFinishedCallback = (_unit) => { SucceededAction(_unit); _payload.PerformCallbacks(); };
+                actionFinishedCallback = (_unit) => { DeselectUnit();  _payload.PerformCallbacks(); SucceededAction(_unit); };
                 _payload.actingUnit.EraseSpaces();
                 actionFinishedCallback(_payload.actingUnit);
                 return;

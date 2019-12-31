@@ -7,6 +7,14 @@ public enum ActionNames
     Attack
 }
 
+public enum ControlsEnum
+{
+    Null,
+    Confirm,
+    OpenMainMenu,
+    Reverse
+}
+
 public enum CommandNames
 {
     None,
@@ -35,4 +43,11 @@ public enum AdjacentDirection
     Down,
     Left,
     None
+}
+
+public enum MenuBufferingType
+{
+    None,
+    Initial,
+    Full
 }

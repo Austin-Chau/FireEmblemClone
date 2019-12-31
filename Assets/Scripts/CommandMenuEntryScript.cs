@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CommandMenuEntryScript : MonoBehaviour
 {
@@ -17,5 +18,19 @@ public class CommandMenuEntryScript : MonoBehaviour
 		}
 	}
 	private bool active;
+
+    public bool Foreground
+    {
+        get
+        {
+            return foreground;
+        }
+        set
+        {
+            transform.Find("Text").GetComponent<Text>().material = value ? null : GameManager.instance.GUI.UITextDarkenedMaterial;
+            foreground = value;
+        }
+    }
+    private bool foreground;
 }
 

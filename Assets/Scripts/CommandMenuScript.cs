@@ -2,98 +2,119 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CommandMenuScript : MonoBehaviour
+public class CommandMenuScript : MonoBehaviour, InteractableGUIMenu
 {
-    [SerializeField] private int commandIndex;
-    [SerializeField] private bool menuNotYetMoved = true;
     [SerializeField] private List<Tuple<GameObject, Action>> listOfEntries;
-    [SerializeField] private const int firstDelayTimerMax = 30;
-    [SerializeField] private const int delayTimerMax = 5;
-    [SerializeField] private int firstDelayTimer = firstDelayTimerMax;
-    [SerializeField] private int delayTimer = delayTimerMax;
+    private Tuple<int, int> suspendedCursorPosition = new Tuple<int,int>(0,0);
+    private Action reverseCallback;
 
-    private void Awake()
+    private bool isSetup;
+
+    public void ReverseCallback()
+    {
+        reverseCallback?.Invoke();
+    }
+    public void SetSuspendedCursorPosition(Tuple<int, int> _cursorPosition)
+    {
+        Debug.Log(_cursorPosition);
+        suspendedCursorPosition = _cursorPosition;
+    }
+    public Tuple<int, int> GetSuspendedCursorPosition()
+    {
+        Debug.Log(suspendedCursorPosition);
+        return suspendedCursorPosition;
+    }
+
+    public bool IsNotReady()
+    {
+        return listOfEntries.Count == 0 || !isSetup;
+    }
+
+    public MenuBufferingType BufferScrolling(AdjacentDirection _direction)
+    {
+        return MenuBufferingType.Full;
+    }
+
+    private void Start()
     {
         gameObject.SetActive(false);
     }
-    private void Update()
+
+    private void LateUpdate()
     {
-        float y = Input.GetAxisRaw("Vertical") * Time.deltaTime;
-        if (Mathf.Abs(y) > Mathf.Epsilon && listOfEntries.Count > 0)
-        {
-            listOfEntries[commandIndex].Item1.transform.parent.GetComponent<CommandMenuEntryScript>().Active = false;
-            if (firstDelayTimer > 0)
-            {
-                firstDelayTimer--;
-            }
-            if (delayTimer > 0)
-            {
-                delayTimer--;
-            }
-            if (delayTimer <= 0 && firstDelayTimer <= 0 || menuNotYetMoved)
-            {
-                menuNotYetMoved = false;
-                delayTimer = delayTimerMax;
-                ShiftCursor(y > 0 ? CursorDirections.Up : CursorDirections.Down);
-            }
-            listOfEntries[commandIndex].Item1.transform.parent.GetComponent<CommandMenuEntryScript>().Active = true;
-        }
-        else
-        {
-            menuNotYetMoved = true;
-            firstDelayTimer = firstDelayTimerMax;
-            delayTimer = 0;
-        }
-        if (Input.GetButtonDown("confirm"))
-        {
-            listOfEntries[commandIndex].Item2();
-            gameObject.SetActive(false);
-        }
+        isSetup = true;
     }
-    private void ShiftCursor(CursorDirections direction)
+
+    public Tuple<int,int> ShiftCursor(Tuple<int,int> _cursorPosition, AdjacentDirection direction)
     {
-        Debug.Log("shifting" + direction);
+        int y = _cursorPosition.Item2;
+
         switch (direction)
         {
-            case CursorDirections.Up:
-                commandIndex--;
+            case AdjacentDirection.Up:
+                y--;
                 break;
-            case CursorDirections.Down:
-                commandIndex++;
+            case AdjacentDirection.Down:
+                y++;
                 break;
-            case CursorDirections.Left:
-                break;
-            case CursorDirections.Right:
-                break;
+            case AdjacentDirection.Left:
+                return _cursorPosition;
+            case AdjacentDirection.Right:
+                return _cursorPosition;
         }
 
-        if (commandIndex < 0)
+        if (y < 0)
         {
-            commandIndex = listOfEntries.Count - 1;
+            y = listOfEntries.Count - 1;
         }
-        else if (commandIndex >= listOfEntries.Count)
+        else if (y >= listOfEntries.Count)
         {
-            commandIndex = 0;
+            y = 0;
         }
+
+        if (y != _cursorPosition.Item2)
+        {
+            SetEntryActive(_cursorPosition, false);
+            Tuple<int, int> newTuple = new Tuple<int, int>(0, y);
+            SetEntryActive(newTuple, true);
+            return newTuple;
+        }
+        return _cursorPosition;
     }
 
-    private void OnEnable()
+    public void SetEntryActive(Tuple<int,int> _position, bool _isActive)
     {
-        commandIndex = 0;
-        listOfEntries[commandIndex].Item1.transform.Translate(new Vector3(-30, 0, 0));
+        listOfEntries[_position.Item2].Item1.GetComponent<CommandMenuEntryScript>().Active = _isActive;
     }
 
-    public void SetEntries(List<Tuple<GameObject, Action>> _listOfEntries)
+    public void SetMenuActive(bool _active)
+    {
+        gameObject.SetActive(_active);
+        if (_active)
+        {
+            isSetup = false;
+            Debug.Log(listOfEntries[0].Item1);
+            listOfEntries[0].Item1.GetComponent<CommandMenuEntryScript>().Active = true;
+        }
+    }
+
+    public void SetMenuForeground(bool _foreground)
+    {
+        foreach (Tuple<GameObject,Action> tuple in listOfEntries)
+        {
+            tuple.Item1.GetComponent<CommandMenuEntryScript>().Foreground = _foreground;
+        }
+    }
+
+    public void Initialize(List<Tuple<GameObject, Action>> _listOfEntries, Action _reverseCallback)
     {
         listOfEntries = _listOfEntries;
+        reverseCallback = _reverseCallback;
     }
-}
 
-public enum CursorDirections
-{
-    None,
-    Up,
-    Down,
-    Left,
-    Right
+    public bool SelectEntry(Tuple<int,int> _position)
+    {
+        listOfEntries[_position.Item2].Item2();
+        return true;
+    }
 }

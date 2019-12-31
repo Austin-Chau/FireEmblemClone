@@ -5,21 +5,19 @@ namespace ParseCommandCallback
     public class ParseCommandCallbackContainer
     {
         public Action<ParseCommandPayload> parseCommand { get; private set; }
-        public ParseCommandPayload payload { get; private set; }
-        public Action releaseCursorCallback { get; private set; }
+        public Action releaseInputCallback { get; private set; }
+        public Action lockInputCallback { get; private set; }
 
-        public ParseCommandCallbackContainer(Action<ParseCommandPayload> _parseCommand, Action _releaseCursorCallback)
+        public ParseCommandCallbackContainer(Action<ParseCommandPayload> _parseCommand, Action _releaseInputCallback, Action _lockInputCallback)
         {
             parseCommand = _parseCommand;
-            releaseCursorCallback = _releaseCursorCallback;
+            releaseInputCallback = _releaseInputCallback;
+            lockInputCallback = _lockInputCallback;
         }
-        public void PerformCallback()
+        public void PerformCallback(ParseCommandPayload payload)
         {
+            lockInputCallback();
             parseCommand(payload);
-        }
-        public void GeneratePayload(CommandNames _commandName, Unit _actingUnit, Tile _targetTile, Action[] _callbacks, object[] _parameters)
-        {
-            payload = new ParseCommandPayload(_commandName, _actingUnit, _targetTile, _callbacks, _parameters);
         }
 
     }

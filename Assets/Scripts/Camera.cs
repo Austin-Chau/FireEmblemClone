@@ -17,12 +17,18 @@ public class Camera : MonoBehaviour
         if (GameManager.instance == null)
         {
             Instantiate(gameManager);
+            GameManager.instance.Camera = this;
         }
     }
 
     void Update()
     {
-        transform.SetPositionAndRotation(GameManager.instance.cursorPosition, Quaternion.identity);
+        MoveToCursor();
+    }
+
+    public void MoveToCursor()
+    {
+        transform.SetPositionAndRotation(GameManager.instance.CursorPosition(), Quaternion.identity);
         transform.Translate(zShift);
     }
 }
