@@ -175,6 +175,8 @@ public class Commander
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Attack:
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
+                _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Attack], _payload.targetTile, actionFinishedCallback);
                 return;
             case CommandNames.InitializeAttack:
                 return;

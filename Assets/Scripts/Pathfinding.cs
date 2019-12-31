@@ -80,6 +80,29 @@ public static class Pathfinding
     }
 
     /// <summary>
+    /// Obtain the direction that a tile is using x y coordinates.
+    /// Prioritizes X direction over Y.
+    /// </summary>
+    /// <param name="source">Start Tile</param>
+    /// <param name="dest">End Tile</param>
+    /// <returns>Returns a Vector2Int with a 1 or -1 in the direction of the target. Vector.Zero if tile is the same.</returns>
+    public static Vector2Int GetTileDirectionVector(Tile source, Tile dest)
+    {
+        if (source == dest) return Vector2Int.zero;
+
+        int xDiff;
+        int yDiff;
+
+        xDiff = (int)(dest.Position.x - source.Position.x);
+        yDiff = (int)(dest.Position.y - source.Position.y);
+
+        if (Mathf.Abs(xDiff) > Mathf.Abs(yDiff)) return new Vector2Int(xDiff / Mathf.Abs(xDiff), 0);
+        else return new Vector2Int(0, yDiff / Mathf.Abs(yDiff));
+
+
+    }
+
+    /// <summary>
     /// FloodFill Algorithm for finding distances from a point of origin
     /// </summary>
     /// <param name="count">Amount of movement units currently moved</param>

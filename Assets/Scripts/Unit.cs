@@ -82,7 +82,7 @@ public class Unit : MonoBehaviour
 
     public void Start()
     {
-        animator = GetComponent<Animator>();
+        animator = transform.Find("Sprite").GetComponent<Animator>();
         rb2D = GetComponent<Rigidbody2D>();
         inverseMoveTime = 1f / moveTime;
         foreach (ActionNames action in (ActionNames[]) Enum.GetValues(typeof(ActionNames)))
@@ -328,6 +328,9 @@ public class Unit : MonoBehaviour
             case (ActionNames.Move):
                 MetaMove(_targetTile, actionCallbackContainer);
                 return;
+            case (ActionNames.Attack):
+                Attack(_targetTile, actionCallbackContainer);
+                return;
         }
     }
 
@@ -473,10 +476,20 @@ public class Unit : MonoBehaviour
     /// The general attack method.
     /// </summary>
     /// <param name="_tile"></param>
-    private bool Attack(Tile _tile, ActionCallbackContainer _callbackContainer)
+    private void Attack(Tile _tile, ActionCallbackContainer _callbackContainer)
     {
         phaseFlags[ActionNames.Attack] = true;
-        return false;
+
+        Vector2Int dir = Pathfinding.GetTileDirectionVector(currentTile, Board.Instance.Tiles[5,5]);
+
+        animator.SetFloat("AttackY", dir.y);
+        animator.SetFloat("AttackX", dir.x);
+
+        //Behaviour will perform callback after animation exit
+        animator.GetBehaviour<PlayerAttackBehaviour>().callbackContainer = _callbackContainer;
+        animator.SetTrigger("playerAttack");
+        
+
     }
     #endregion
     #endregion
