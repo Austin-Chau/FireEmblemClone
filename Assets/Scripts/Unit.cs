@@ -74,6 +74,7 @@ public class Unit : MonoBehaviour
 
 
     private Dictionary<Tile, int> moveTree;
+    private Dictionary<int, List<Tile>> attackTree;
 
     private Dictionary<ActionNames, bool> phaseFlags = new Dictionary<ActionNames, bool>(); //moved, attacked, etc
     private Dictionary<ActionNames, bool> phaseActiveFlags = new Dictionary<ActionNames, bool>(); //moving, attacking, etc
@@ -290,7 +291,28 @@ public class Unit : MonoBehaviour
                     spaces[pair.Key] = moveSpaceScript;
                 }
                 break;
-
+            case ActionNames.Attack:
+                attackTree = GenerateAttackTree(currentTile);
+                foreach (KeyValuePair<int,List<Tile>> pair in attackTree)
+                {
+                    foreach (Tile tile in pair.Value)
+                    {
+                        if (spaces.ContainsKey(tile) && spaces[tile] != null)
+                        {
+                            //maybe add on some extra flags
+                        }
+                        else
+                        {
+                            Vector3 position = tile.Position;
+                            ActionSpace attackSpaceScript = Instantiate(ActSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
+                            attackSpaceScript.parentUnit = this;
+                            attackSpaceScript.currentTile = tile;
+                            attackSpaceScript.command = CommandNames.Attack;
+                            spaces[tile] = attackSpaceScript;
+                        }
+                    }
+                }
+                break;
             default:
                 break;
         }
@@ -501,6 +523,31 @@ public class Unit : MonoBehaviour
         _tile.CurrentUnit.SetHitTrigger();
 
 
+    }
+
+    /// <summary>
+    /// Generates a list of tiles, indexed by what weapons can access those tiles (currently just a placeholder integer until we set up a weapon/attack class or something)
+    /// </summary>
+    /// <param name="_currentTile"></param>
+    /// <returns></returns>
+    private Dictionary<int,List<Tile>> GenerateAttackTree(Tile _currentTile)
+    {
+        Dictionary<int, List<Tile>> returnDict = new Dictionary<int, List<Tile>>();
+        //foreach (weapon in unit's weapons)
+        List<Tile> list0 = new List<Tile>();
+        for (int i = 1; i <= 2; i++) //this weapon can hit 1 tile away, or 2 tiles away
+        {
+            foreach (Tile tile in GameManager.instance.Board.GenerateDiamond(i, _currentTile))
+            {
+                if (tile.CurrentUnit != null && tile.CurrentUnit.Team != Team)
+                {
+                    Debug.Log(tile.GridPosition);
+                    list0.Add(tile);
+                }
+            }
+        }
+        returnDict[0] = list0;
+        return returnDict;
     }
     #endregion
     #endregion

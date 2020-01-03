@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -179,8 +179,9 @@ public class Commander
                 _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Attack], _payload.targetTile, actionFinishedCallback);
                 return;
             case CommandNames.InitializeAttack:
-                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
-                _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Attack], _payload.targetTile, actionFinishedCallback);
+                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); SucceededAction(_unit); };
+                _payload.actingUnit.GenerateActSpaces(ActionNames.Attack);
+                actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.EndTurn:
                 actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };

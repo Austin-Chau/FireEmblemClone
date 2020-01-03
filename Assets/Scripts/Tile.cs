@@ -20,6 +20,7 @@ public class Tile
     /// <param name="_type"></param>
     public Tile(Vector2 pos, TileType _type, Transform parent)
     {
+        GridPosition = new Vector2Int((int)pos.x,(int)pos.y);
         type = _type;
         CreateTile();
         tileObject.transform.position = pos;
@@ -70,6 +71,7 @@ public class Tile
     }
     public int MovementWeight;
     public Vector3 Position { get; private set; }
+    public Vector2Int GridPosition { get; private set; }
 
     public TileType type { get; private set; }
 

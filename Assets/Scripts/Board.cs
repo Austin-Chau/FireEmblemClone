@@ -100,4 +100,55 @@ public class Board
             }
         }
     }
+
+    /// <summary>
+    /// Fetches the tiles in the border of a diamond a certain distance away. 0 = 1 tile, 1 = 4 tile, 2 = 8 tile, etc.
+    /// </summary>
+    /// <param name="_distance"></param>
+    /// <returns>The list of tiles.</returns>
+    public List<Tile> GenerateDiamond(int _distance, Tile _centerTile)
+    {
+        List<Tile> list = new List<Tile>();
+        if (_distance == 0)
+        {
+            //Degenerate case
+            list.Add(_centerTile);
+            return list;
+        }
+        for (int i = 0; i < _distance; i++)
+        {
+            int centerX = _centerTile.GridPosition.x;
+            int centerY = _centerTile.GridPosition.y;
+
+            //left
+            if (centerX - _distance + i >= 0 && centerY + i < Tiles.GetLength(1))
+            {
+                Tile tile = Tiles[centerX - _distance + i, centerY + i];
+                Debug.Log("left" + tile.GridPosition);
+                list.Add(tile);
+            }
+            //top
+            if (centerX + i < Tiles.GetLength(0) && centerY + _distance - i < Tiles.GetLength(1))
+            {
+                Tile tile = Tiles[centerX + i, centerY + _distance - i];
+                Debug.Log("top" + tile.GridPosition);
+                list.Add(tile);
+            }
+            //right
+            if (centerY - i >= 0 && centerX + _distance - i < Tiles.GetLength(0))
+            {
+                Tile tile = Tiles[centerX + _distance - i, centerY - i];
+                Debug.Log("right" + tile.GridPosition);
+                list.Add(tile);
+            }
+            //bottom
+            if (centerX - i >= 0 && centerY - _distance + i >= 0)
+            {
+                Tile tile = Tiles[centerX - i, centerY - _distance + i];
+                Debug.Log("bottom" + tile.GridPosition);
+                list.Add(tile);
+            }
+        }
+        return list;
+    }
 }
