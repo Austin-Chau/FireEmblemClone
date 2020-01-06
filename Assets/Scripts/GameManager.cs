@@ -133,11 +133,11 @@ public class GameManager : MonoBehaviour
 
         if (remainingActableUnits.Count < 1)
         {
-            Debug.Log("Retired a unit, and now the commander is out of units.");
+            //Debug.Log("Retired a unit, and now the commander is out of units.");
             PassTurn();
             return;
         }
-        Debug.Log("Retired a unit, but the commander has more.");
+        //Debug.Log("Retired a unit, but the commander has more.");
     }
 
     /// <summary>

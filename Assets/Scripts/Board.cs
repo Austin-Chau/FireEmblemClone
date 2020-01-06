@@ -124,28 +124,28 @@ public class Board
             if (centerX - _distance + i >= 0 && centerY + i < Tiles.GetLength(1))
             {
                 Tile tile = Tiles[centerX - _distance + i, centerY + i];
-                Debug.Log("left" + tile.GridPosition);
+                //Debug.Log("left" + tile.GridPosition);
                 list.Add(tile);
             }
             //top
             if (centerX + i < Tiles.GetLength(0) && centerY + _distance - i < Tiles.GetLength(1))
             {
                 Tile tile = Tiles[centerX + i, centerY + _distance - i];
-                Debug.Log("top" + tile.GridPosition);
+                //Debug.Log("top" + tile.GridPosition);
                 list.Add(tile);
             }
             //right
             if (centerY - i >= 0 && centerX + _distance - i < Tiles.GetLength(0))
             {
                 Tile tile = Tiles[centerX + _distance - i, centerY - i];
-                Debug.Log("right" + tile.GridPosition);
+                //Debug.Log("right" + tile.GridPosition);
                 list.Add(tile);
             }
             //bottom
             if (centerX - i >= 0 && centerY - _distance + i >= 0)
             {
                 Tile tile = Tiles[centerX - i, centerY - _distance + i];
-                Debug.Log("bottom" + tile.GridPosition);
+                //Debug.Log("bottom" + tile.GridPosition);
                 list.Add(tile);
             }
         }
