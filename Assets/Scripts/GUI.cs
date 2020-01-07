@@ -3,43 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public interface InteractableGUIMenu
-{
-    Tuple<int, int> ShiftCursor(Tuple<int, int> _cursorPosition, AdjacentDirection _direction);
-
-    bool IsNotReady();
-    Tuple<int, int> GetSuspendedCursorPosition();
-    void SetSuspendedCursorPosition(Tuple<int, int> _cursorPosition);
-
-    void SetMenuActive(bool _active);
-    void SetMenuForeground(bool _foreground);
-    void ReverseCallback();
-
-    bool SelectEntry(Tuple<int, int> _position);
-    MenuBufferingType BufferScrolling(AdjacentDirection _direction);
-}
-
-public interface StaticGUIMenu
-{
-    void SetMenuActive(bool _active);
-}
-
 public class GUI : MonoBehaviour
 {
     public GameObject textPrefab;
-    public GameObject menuEntryPrefab;
+    public GameObject bodyTextPrefab;
+    public GameObject menuEntryLabelPrefab;
     public GameObject turnTextObject;
     public GameObject actionTextObject;
     private GameObject commandMenuObject;
     private GameObject turnBannerObject;
     private GameObject mainMenuObject;
 
+    private MenuGroup mainMenuGroup;
+
     public Material UITextDarkenedMaterial;
 
     #region Menu Controls
-    private Stack<InteractableGUIMenu> suspendedMenus = new Stack<InteractableGUIMenu>();
-    private InteractableGUIMenu currentFocusedMenu;
-    private Tuple<int, int> cursorPosition = new Tuple<int,int>(0,0);
+    private Stack<MenuGroup> suspendedMenuGroups = new Stack<MenuGroup>();
+    private MenuGroup currentMenuGroup;
+    private Menu currentFocusedMenu;
 
     private AdjacentDirection persistantInputDirection = AdjacentDirection.None;
     private const int menuTimerMax = 30;
@@ -95,6 +77,8 @@ public class GUI : MonoBehaviour
         turnBannerObject.SetActive(false);
         mainMenuObject = transform.Find("MainMenu").gameObject;
 
+        mainMenuGroup = GenerateMainMenu();
+
     }
     public void UpdateSelectedUnit(Unit _unit)
     {
@@ -119,37 +103,26 @@ public class GUI : MonoBehaviour
             turnText.text = teamNames[_commander.Team] + "'s turn";
         }
     }
-    public void SwitchMenuFocus(InteractableGUIMenu _newMenu)
-    {
-        if (currentFocusedMenu == _newMenu)
-        {
-            return;
-        }
-
-        if (currentFocusedMenu != null)
-        {
-            currentFocusedMenu.SetSuspendedCursorPosition(cursorPosition);
-            currentFocusedMenu.SetMenuForeground(false);
-            suspendedMenus.Push(currentFocusedMenu);
-        }
-        currentFocusedMenu = _newMenu;
-        cursorPosition = currentFocusedMenu.GetSuspendedCursorPosition();
-        currentFocusedMenu.SetMenuActive(true);
-    }
 
     public void MoveCursor(AdjacentDirection _direction)
     {
-        if (_direction == AdjacentDirection.None || currentFocusedMenu == null || currentFocusedMenu.IsNotReady())
+        if (_direction == AdjacentDirection.None || currentFocusedMenu == null) //|| current menu isn't ready
         {
             persistantInputDirection = AdjacentDirection.None;
             menuTimer = menuTimerMax;
             return;
         }
 
-        if (!StepScrollingBuffer(currentFocusedMenu.BufferScrolling(_direction), _direction))
+        if (!StepScrollingBuffer(currentFocusedMenu.GetBufferScrolling(_direction), _direction))
             return;
 
-        cursorPosition = currentFocusedMenu.ShiftCursor(cursorPosition, _direction);
+        Menu tempMenu = currentFocusedMenu.GetAdjacentMenu(_direction);
+        if (tempMenu != null && tempMenu != currentFocusedMenu)
+        {
+            currentFocusedMenu.SetSelected(false);
+            currentFocusedMenu = tempMenu;
+            currentFocusedMenu.SetSelected(true);
+        }
     }
 
     private bool StepScrollingBuffer(MenuBufferingType _bufferingType, AdjacentDirection _direction)
@@ -185,58 +158,144 @@ public class GUI : MonoBehaviour
 
     public void ReverseMenu()
     {
-        if (currentFocusedMenu != null)
-        {
-            currentFocusedMenu.ReverseCallback();
-            currentFocusedMenu.SetMenuActive(false);
-        }
+        currentFocusedMenu.SetSelected(false);
+        currentMenuGroup.SetActive(false);
+        currentMenuGroup.reverseCallback();
 
-        if (suspendedMenus.Count > 0)
+        if (suspendedMenuGroups.Count > 0)
         {
-            currentFocusedMenu = suspendedMenus.Pop();
-            currentFocusedMenu.SetMenuForeground(true);
-            cursorPosition = currentFocusedMenu.GetSuspendedCursorPosition();
+            currentMenuGroup = suspendedMenuGroups.Pop();
+            currentFocusedMenu = currentMenuGroup.GetInitialMenu();
+            currentMenuGroup.SetForeground(true);
+            currentFocusedMenu.SetSelected(true);
         }
         else
         {
+            currentMenuGroup = null;
             currentFocusedMenu = null;
         }
+    }
+    public void ForwardMenu(MenuGroup _newMenuGroup)
+    {
+        if (currentMenuGroup == _newMenuGroup)
+        {
+            return;
+        }
+
+        if (currentMenuGroup != null)
+        {
+            currentMenuGroup.SetForeground(false);
+            suspendedMenuGroups.Push(currentMenuGroup);
+        }
+        currentMenuGroup = _newMenuGroup;
+        currentFocusedMenu = currentMenuGroup.GetInitialMenu();
+        currentMenuGroup.SetActive(true);
+        currentFocusedMenu.SetSelected(true);
     }
 
     public void ActivateCursor()
     {
-        if (currentFocusedMenu.SelectEntry(cursorPosition))
+        if (currentFocusedMenu.SelectEntry())
         {
-            currentFocusedMenu.SetMenuActive(false);
-            currentFocusedMenu = null;
+            currentMenuGroup.SetActive(false);
+
+            if (suspendedMenuGroups.Count > 0)
+            {
+                currentMenuGroup = suspendedMenuGroups.Pop();
+                currentFocusedMenu = currentMenuGroup.GetInitialMenu();
+                currentMenuGroup.SetForeground(true);
+                currentFocusedMenu.SetSelected(true);
+            }
+            else
+            {
+                currentMenuGroup = null;
+                currentFocusedMenu = null;
+            }
         }
     }
 
     public void StartMainMenu()
     {
-        SwitchMenuFocus(mainMenuObject.GetComponent<MainMenuScript>());
+        ForwardMenu(mainMenuGroup);
     }
 
-    public void StartCommandMenu(List<Tuple<string, Action>> ListOfEntries, Action _reverseCallback)
+    public void StartCommandMenu(List<Tuple<string, Action>> _listOfEntries, Action _reverseCallback)
     {
         foreach (Transform child in commandMenuObject.transform)
         {
             Destroy(child.gameObject);
         }
 
-        List<Tuple<GameObject, Action>> listOfEntries = new List<Tuple<GameObject, Action>>();
+        MenuGroup commandMenuGroup = new MenuGroup(_reverseCallback);
 
-        foreach (Tuple<string, Action> entry in ListOfEntries)
+        Menu[] tempArray = new Menu[_listOfEntries.Count];
+        int i = 0;
+
+        foreach (Tuple<string, Action> entry in _listOfEntries)
         {
-            GameObject tempEntry = Instantiate(menuEntryPrefab, new Vector3(0, 0, 0), Quaternion.identity, commandMenuObject.transform);
-            GameObject tempEntryText = tempEntry.transform.Find("Text").gameObject;
-            tempEntryText.GetComponent<Text>().text = entry.Item1;
-            listOfEntries.Add(new Tuple<GameObject,Action>(tempEntry,entry.Item2));
+            GameObject tempEntry = Instantiate(menuEntryLabelPrefab, commandMenuObject.transform, false);
+            Func<bool> tempFunc = () => { entry.Item2(); return true; };
+            Menu tempMenu = new CommandMenuEntryLabel(tempEntry, entry.Item1, tempFunc);
+            tempMenu.SetActive(true);
+            tempArray[i] = tempMenu;
+
+            if (i > 0)
+            {
+                tempArray[i - 1].SetAdjacentMenu(AdjacentDirection.Down, tempArray[i]);
+                tempArray[i].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i - 1]);
+            }
+            if (i == _listOfEntries.Count - 1)
+            {
+                tempArray[i].SetAdjacentMenu(AdjacentDirection.Down, tempArray[0]);
+                tempArray[0].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i]);
+            }
+
+            commandMenuGroup.Add(tempMenu);
+            i++;
         }
-        cursorPosition = new Tuple<int, int>(0, 0);
-        currentFocusedMenu = commandMenuObject.GetComponent<CommandMenuScript>();
-        commandMenuObject.GetComponent<CommandMenuScript>().Initialize(listOfEntries, _reverseCallback);
-        currentFocusedMenu.SetMenuActive(true);
+        currentMenuGroup = commandMenuGroup;
+        currentFocusedMenu = commandMenuGroup.GetInitialMenu();
+        commandMenuObject.SetActive(true);
+        currentFocusedMenu.SetSelected(true);
+    }
+
+    private string[] mainMenuLabels = { "Overview", "Controls" };
+
+    public MenuGroup GenerateMainMenu()
+    {
+        MenuGroup tempGroup = new MenuGroup(() => { });
+        GameObject leftColumn = mainMenuObject.transform.Find("LeftColumn").gameObject;
+        GameObject rightColumn = mainMenuObject.transform.Find("RightColumn").gameObject;
+        Menu[] tempArray = new Menu[mainMenuLabels.Length];
+        int i = 0;
+
+        foreach (string _string in mainMenuLabels)
+        {
+            GameObject tempEntryObject = Instantiate(menuEntryLabelPrefab, leftColumn.transform, false);
+            GameObject tempEntryStagingAreaObject = Instantiate(bodyTextPrefab, rightColumn.transform, false);
+
+            Menu tempMenu = new MainMenuEntryLabel(tempEntryObject, _string, tempEntryStagingAreaObject);
+            tempArray[i] = tempMenu;
+            Debug.Log(i.ToString() + mainMenuLabels.Length.ToString());
+            if (i > 0)
+            {
+                Debug.Log(i);
+                tempArray[i - 1].SetAdjacentMenu(AdjacentDirection.Down, tempArray[i]);
+                tempArray[i].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i - 1]);
+            }
+            if (i == mainMenuLabels.Length - 1)
+            {
+                Debug.Log(i);
+                tempArray[i].SetAdjacentMenu(AdjacentDirection.Down, tempArray[0]);
+                tempArray[0].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i]);
+            }
+
+            tempGroup.Add(tempMenu);
+
+            i++;
+        }
+        tempGroup.SetActive(false);
+        return tempGroup;
     }
 
     public void TurnBanner(Commander _commander, Action _callback)

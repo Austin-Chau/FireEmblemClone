@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using ModuloCorrect;
 
-public class MainMenuScript : MonoBehaviour, InteractableGUIMenu
+public class MainMenuScript : MonoBehaviour
 {
     public GameObject MainMenuEntryPrefab;
     private Tuple<int, int> suspendedCursorPosition = new Tuple<int, int>(0, 0);

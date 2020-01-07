@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CommandMenuScript : MonoBehaviour, InteractableGUIMenu
+public class CommandMenuScript : MonoBehaviour
 {
     [SerializeField] private List<Tuple<GameObject, Action>> listOfEntries;
     private Tuple<int, int> suspendedCursorPosition = new Tuple<int,int>(0,0);
