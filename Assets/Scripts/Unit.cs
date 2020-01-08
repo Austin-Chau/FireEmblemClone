@@ -187,7 +187,7 @@ public class Unit : MonoBehaviour
     /// </summary>
     public void ResetStates()
     {
-        Debug.Log("reset states");
+        //Debug.Log("reset states");
         pastTile = currentTile;
         List<ActionNames> keys = new List<ActionNames>(phaseFlags.Keys);
         foreach (ActionNames action in keys)
@@ -511,7 +511,7 @@ public class Unit : MonoBehaviour
         phaseFlags[ActionNames.Attack] = true;
 
         Vector2Int dir = Pathfinding.GetTileDirectionVector(currentTile, _tile);
-
+        Debug.Log(dir);
 
         animator.SetFloat("AttackY", dir.y);
         animator.SetFloat("AttackX", dir.x);
@@ -541,7 +541,7 @@ public class Unit : MonoBehaviour
             {
                 if (tile.CurrentUnit != null && tile.CurrentUnit.Team != Team)
                 {
-                    Debug.Log(tile.GridPosition);
+                    //Debug.Log(tile.GridPosition);
                     list0.Add(tile);
                 }
             }
