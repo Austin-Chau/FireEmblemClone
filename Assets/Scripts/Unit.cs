@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-public class Unit : MonoBehaviour
+public class Unit : MonoBehaviour, IDamageableObject
 {
+    
 
     #region Public Variables
     public GameObject MoveSpace;
@@ -13,6 +14,13 @@ public class Unit : MonoBehaviour
     public float moveTime = 0.1f;
     public int actRadius = 1;
     public int moveRadius = 3;
+
+
+    public int MaxHealth { get; private set; }
+    public int CurrentHealth { get; private set; }
+    public int Strength { get; private set; }
+    public int Defence { get; private set; }
+    public int Movement { get; private set; }
 
     public Action currentAction;
 
@@ -68,6 +76,7 @@ public class Unit : MonoBehaviour
 
     private Animator animator;
     private Rigidbody2D rb2D;
+    private UnitHealthBar healthBar;
 
     private float inverseMoveTime;
     private bool spent;
@@ -79,6 +88,8 @@ public class Unit : MonoBehaviour
 
     private Dictionary<ActionNames, bool> actionsPerformedFlags = new Dictionary<ActionNames, bool>(); //moved, attacked, etc
     private Dictionary<ActionNames, bool> actionsPerformingFlags = new Dictionary<ActionNames, bool>(); //moving, attacking, etc
+
+    private const string HealthBarLocation = "Prefabs/GUI/UnitHealthBar";
 
     #endregion
 
@@ -92,6 +103,7 @@ public class Unit : MonoBehaviour
             actionsPerformedFlags[action] = false;
             actionsPerformingFlags[action] = false;
         }
+
     }
 
     public bool GetPhaseFlag(ActionNames action)
@@ -134,9 +146,27 @@ public class Unit : MonoBehaviour
         pastTile = currentTile;
         transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
+        CreateHealthBar();
         ResetStates();
         return this;
     }
+
+    void CreateHealthBar()
+    {
+        GameObject go = Instantiate(Resources.Load<GameObject>(HealthBarLocation));
+        healthBar = go.GetComponent<UnitHealthBar>();
+        healthBar.Initialize(MaxHealth, this);
+    }
+
+    #region DamageableObjectInterface
+
+
+    public void TakeDamage(int AttackingStrength)
+    {
+        CurrentHealth -= AttackingStrength - Defence;
+    }
+
+    #endregion
 
     #region Data Access Methods
 
@@ -560,7 +590,12 @@ public class Unit : MonoBehaviour
         animator.GetBehaviour<PlayerAttackBehaviour>().callbackContainer = _callbackContainer;
 
         animator.SetTrigger("playerAttack");
-        _tile.CurrentUnit.SetHitTrigger();
+
+
+        if (_tile.Occupied)
+        {
+            _tile.CurrentUnit.TakeDamage(Strength);
+        }
 
 
     }
@@ -589,6 +624,7 @@ public class Unit : MonoBehaviour
         returnDict[0] = list0;
         return returnDict;
     }
+    
     #endregion
     #endregion
 }
