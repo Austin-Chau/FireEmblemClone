@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
     public GameObject CursorPrefab;
     public GameObject GUIManagerPrefab;
 
-    public Camera Camera;
+    public CameraManager CameraManager;
     public Board Board;
     public Cursor Cursor { get; private set; }
     public GUIManager GUIManager { get; private set; }
@@ -108,7 +108,7 @@ public class GameManager : MonoBehaviour
         Debug.Log("Now going to be commander " + commanderIndex + "'s turn");
         CurrentCommander = Commanders[commanderIndex];
         Cursor.JumpToTile(unitRosters[CurrentCommander][0].currentTile);
-        Camera.MoveToCursor();
+        CameraManager.MoveToCursor();
         GUIManager.UpdateCurrentTeam(CurrentCommander);
         remainingActableUnits = new List<Unit>();
         foreach (Unit unit in unitRosters[CurrentCommander])

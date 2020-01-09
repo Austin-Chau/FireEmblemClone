@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Camera : MonoBehaviour
+public class CameraManager : MonoBehaviour
 {
 
     //prefab to instantiate
@@ -17,7 +17,7 @@ public class Camera : MonoBehaviour
         if (GameManager.instance == null)
         {
             Instantiate(gameManager);
-            GameManager.instance.Camera = this;
+            GameManager.instance.CameraManager = this;
         }
     }
 

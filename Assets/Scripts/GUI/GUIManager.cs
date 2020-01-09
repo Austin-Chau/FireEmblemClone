@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class GUIManager : MonoBehaviour
 {
+
+    public GameObject GUIManagerObject;
     public GameObject textPrefab;
     public GameObject bodyTextPrefab;
     public GameObject menuEntryLabelPrefab;
@@ -82,6 +84,7 @@ public class GUIManager : MonoBehaviour
 
         mainMenuContainer = GenerateMainMenu();
 
+        GUIManagerObject = gameObject;
     }
     public void UpdateSelectedUnit(Unit _unit)
     {
