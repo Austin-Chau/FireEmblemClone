@@ -44,7 +44,7 @@ public class MainMenuEntryScript : MonoBehaviour
         }
         set
         {
-            transform.Find("Text").GetComponent<Text>().material = value ? null : GameManager.instance.GUI.UITextDarkenedMaterial;
+            transform.Find("Text").GetComponent<Text>().material = value ? null : GameManager.instance.GUIManager.UITextDarkenedMaterial;
             foreground = value;
         }
     }

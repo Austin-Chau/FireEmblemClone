@@ -8,7 +8,7 @@ public class MainMenuScript : MonoBehaviour
 {
     public GameObject MainMenuEntryPrefab;
     private Tuple<int, int> suspendedCursorPosition = new Tuple<int, int>(0, 0);
-    private Dictionary<string,string> menuData = new Dictionary<string,string>()
+    private Dictionary<string, string> menuData = new Dictionary<string, string>()
     {
         { "Overview", "Lorem ipsum dolor sit amet, eleifend vestibulum vestibulum elit pede ut aliquam, id orci integer vel egestas at elit, nisl duis justo ultrices vivamus congue, amet integer sapien sed viverra lacus vivamus. Gravida orci duis purus vitae fusce torquent, mauris ullamcorper amet amet ac condimentum, laoreet netus velit aliquam justo suspendisse nunc, purus praesent ligula nec gravida quisque eget, eu sed maecenas sodales sed mauris. Vestibulum tellus duis sem nam iaculis, fusce feugiat egestas rutrum interdum interdum id, urna urna aliquet in facilisis pellentesque nec, neque sit soluta volutpat justo vitae, ac eros viverra quisque nunc integer eros. Lorem mattis felis lorem vitae vitae aliquam, consectetuer penatibus eget ut nisl suscipit aliquet, donec convallis consequat consequat vitae purus. Maecenas sodales in sociis sem mauris quo, sollicitudin fermentum lacus aliquam luctus laudantium quis, sit curabitur nulla adipiscing duis neque, nulla eu wisi sit vivamus vestibulum. At at eget consectetuer neque vestibulum ante, libero in lacinia interdum volutpat arcu vulputate, sit lectus vestibulum nec sed a. Et porta leo nunc donec in nulla, quis amet consequat quam non et, pede amet fermentum tellus magna mauris in. Sed interdum rutrum sed gravida nec, vel libero pharetra ac dolor sed consequat, nibh imperdiet morbi varius sed et, lorem diam habitant nec curabitur suspendisse, a arcu nullam etiam felis eget diam. Purus est turpis nonummy elit aliquet, commodo pellentesque curabitur pellentesque vel sapien curabitur, bibendum dis commodo phasellus mauris nunc mauris, at fringilla bibendum sit massa gravida, habitant aliquam lectus et nunc est. Interdum justo elementum dolor et sem, ac pellentesque et hac laoreet elit ut, pellentesque feugiat viverra erat volutpat ridiculus, quisque pellentesque dui senectus sit ipsum, erat dolor nisl velit arcu aenean. Porta sollicitudin ipsum erat ac et, nec libero ut et in diam, metus vestibulum praesent donec integer blandit quis, proin eros metus porta in donec. Placerat in neque vitae urna vivamus perferendis, ipsum potenti mauris neque enim ipsum sapien, sem eget nascetur tortor cras at, nostra adipiscing dolor nonummy porttitor pulvinar ultrices." },
         { "Controls", "ControlsBody" }
@@ -51,11 +51,11 @@ public class MainMenuScript : MonoBehaviour
     {
         leftColumn = transform.Find("LeftColumn").gameObject;
         rightColumn = transform.Find("RightColumn").gameObject;
-        rightColumn.transform.Find("Text").GetComponent<Text>().material = GameManager.instance.GUI.UITextDarkenedMaterial;
+        rightColumn.transform.Find("Text").GetComponent<Text>().material = GameManager.instance.GUIManager.UITextDarkenedMaterial;
 
         foreach (string tempName in menuData.Keys)
         {
-            GameObject newObject = Instantiate(MainMenuEntryPrefab,leftColumn.transform);
+            GameObject newObject = Instantiate(MainMenuEntryPrefab, leftColumn.transform);
             newObject.GetComponent<MainMenuEntryScript>().Initialize(tempName, menuData[tempName], rightColumn);
             newObject.name = tempName;
             listOfEntries.Add(newObject);
@@ -90,13 +90,13 @@ public class MainMenuScript : MonoBehaviour
                 x++;
                 break;
         }
-        y = CustomMath.mod(y,listOfEntries.Count);
+        y = CustomMath.mod(y, listOfEntries.Count);
         x = CustomMath.mod(x, 2);
         returnValue = new Tuple<int, int>(x, y);
         if (x != _cursorPosition.Item1)
         {
             bufferScrolling = (x == 1) ? MenuBufferingType.Initial : MenuBufferingType.Full;
-            rightColumn.transform.Find("Text").GetComponent<Text>().material = (x == 1) ? null : GameManager.instance.GUI.UITextDarkenedMaterial;
+            rightColumn.transform.Find("Text").GetComponent<Text>().material = (x == 1) ? null : GameManager.instance.GUIManager.UITextDarkenedMaterial;
         }
         if (y != _cursorPosition.Item2)
         {
@@ -107,7 +107,7 @@ public class MainMenuScript : MonoBehaviour
                     SetEntryActive(returnValue, true);
                     break;
                 case 1:
-                    Vector3 shift = new Vector3(0,0,0);
+                    Vector3 shift = new Vector3(0, 0, 0);
                     if (direction == AdjacentDirection.Up)
                     {
                         shift = new Vector3(0, 6, 0);
@@ -135,7 +135,7 @@ public class MainMenuScript : MonoBehaviour
         {
             isSetup = false;
             listOfEntries[0].GetComponent<MainMenuEntryScript>().Active = true;
-            rightColumn.transform.Find("Text").GetComponent<Text>().material = GameManager.instance.GUI.UITextDarkenedMaterial;
+            rightColumn.transform.Find("Text").GetComponent<Text>().material = GameManager.instance.GUIManager.UITextDarkenedMaterial;
         }
     }
 
@@ -145,7 +145,7 @@ public class MainMenuScript : MonoBehaviour
         {
             tempGameObject.GetComponent<CommandMenuEntryScript>().Foreground = _foreground;
         }
-        rightColumn.transform.Find("Text").GetComponent<Text>().material = GameManager.instance.GUI.UITextDarkenedMaterial;
+        rightColumn.transform.Find("Text").GetComponent<Text>().material = GameManager.instance.GUIManager.UITextDarkenedMaterial;
     }
 
     public bool SelectEntry(Tuple<int, int> _position)

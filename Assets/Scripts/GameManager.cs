@@ -10,12 +10,12 @@ public class GameManager : MonoBehaviour
 
     public GameObject UnitPrefab;
     public GameObject CursorPrefab;
-    public GameObject GUIPrefab;
+    public GameObject GUIManagerPrefab;
 
     public Camera Camera;
     public Board Board;
     public Cursor Cursor { get; private set; }
-    public GUI GUI { get; private set; }
+    public GUIManager GUIManager { get; private set; }
 
     public List<Commander> Commanders { get; private set; }
 
@@ -55,7 +55,7 @@ public class GameManager : MonoBehaviour
         BoardScript = GetComponent<BoardManager>();
         Commanders = new List<Commander>();
         Cursor = Instantiate(CursorPrefab).GetComponent<Cursor>();
-        GUI = Instantiate(GUIPrefab).GetComponent<GUI>();
+        GUIManager = Instantiate(GUIManagerPrefab).GetComponent<GUIManager>();
         InitGame();
     }
 
@@ -80,10 +80,10 @@ public class GameManager : MonoBehaviour
         tempCommander.GameManager = this;
         unitRosters[tempCommander] = new List<Unit>();
         Commanders.Add(tempCommander);
-        SpawnAndAddUnit(Board.Tiles[5, 5], tempCommander);
+        SpawnAndAddUnit(Board.Tiles[1, 1], tempCommander);
 
         Cursor.JumpToTile(unitRosters[CurrentCommander][0].currentTile);
-        GUI.UpdateCurrentTeam(CurrentCommander);
+        GUIManager.UpdateCurrentTeam(CurrentCommander);
         remainingActableUnits = new List<Unit>();
         foreach(Unit unit in unitRosters[CurrentCommander])
         {
@@ -109,7 +109,7 @@ public class GameManager : MonoBehaviour
         CurrentCommander = Commanders[commanderIndex];
         Cursor.JumpToTile(unitRosters[CurrentCommander][0].currentTile);
         Camera.MoveToCursor();
-        GUI.UpdateCurrentTeam(CurrentCommander);
+        GUIManager.UpdateCurrentTeam(CurrentCommander);
         remainingActableUnits = new List<Unit>();
         foreach (Unit unit in unitRosters[CurrentCommander])
         {
@@ -118,7 +118,7 @@ public class GameManager : MonoBehaviour
         }
         CurrentCommander.StartTurn();
         Action callback = () => { inputLocked = false; };
-        GUI.TurnBanner(CurrentCommander, callback);
+        GUIManager.TurnBanner(CurrentCommander, callback);
     }
 
     /// <summary>
@@ -235,18 +235,18 @@ public class GameManager : MonoBehaviour
         else if (Mathf.Abs(y) > Mathf.Epsilon)
             direction = y > 0 ? AdjacentDirection.Up : AdjacentDirection.Down;
 
-        if (GUI.InANavigatableMenu())
+        if (GUIManager.InANavigatableMenu())
         {
             switch (pressedInput)
             {
                 case ControlsEnum.Confirm:
-                    GUI.ActivateCursor();
+                    GUIManager.ActivateCursor();
                     break;
                 case ControlsEnum.Reverse:
-                    GUI.ReverseMenu();
+                    GUIManager.ReverseMenuContainer();
                     break;
                 default:
-                    GUI.MoveCursor(direction);
+                    GUIManager.MoveCursor(direction);
                     break;
             }
         }
@@ -268,7 +268,7 @@ public class GameManager : MonoBehaviour
         switch (pressedInput)
         {
             case ControlsEnum.OpenMainMenu:
-                GUI.StartMainMenu();
+                GUIManager.StartMainMenu();
                 break;
         }
     }

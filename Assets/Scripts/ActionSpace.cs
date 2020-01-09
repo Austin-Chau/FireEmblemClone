@@ -13,4 +13,9 @@ public class ActionSpace : MonoBehaviour
         Destroy(this.gameObject);
     }
 
+    public void Hide()
+    {
+        gameObject.GetComponent<Renderer>().enabled = false;
+    }
+
 }

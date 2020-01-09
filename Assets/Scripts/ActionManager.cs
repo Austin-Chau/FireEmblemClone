@@ -77,7 +77,7 @@ public class PlayerBehavior : ActionManager
                 ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.Revert, _unit, _targetTile, callbacks, new object[0]);
                 _callbackContainer.PerformCallback(tempPayload);
             };
-        GameManager.instance.GUI.StartCommandMenu(listOfEntries, reverseCallback);
+        GameManager.instance.GUIManager.StartCommandMenu(listOfEntries, reverseCallback);
         return;
     }
 

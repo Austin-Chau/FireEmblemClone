@@ -20,7 +20,7 @@ public class Commander
         }
         set
         {
-            GameManager.instance.GUI.SelectedUnit = value;
+            GameManager.instance.GUIManager.SelectedUnit = value;
             selectedUnit = value;
         }
     }
@@ -86,7 +86,7 @@ public class Commander
 
     private void SwitchSelectedUnit(CursorContext _context)
     {
-        Debug.Log("switching selected units from "+ SelectedUnit);
+        Debug.Log("switching selected units from " + SelectedUnit);
         if (SelectedUnit == _context.currentTile.CurrentUnit)
         {
             Debug.Log("Unit on the tile is the same as SelectedUnit, nothing is done.");
@@ -161,40 +161,40 @@ public class Commander
         switch (_payload.commandName)
         {
             case CommandNames.Move:
-                actionFinishedCallback = (_unit) => { DeselectUnit();  _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); CheckIfUnitFinishedTurn(_unit); };
                 _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Move], _payload.targetTile, actionFinishedCallback);
                 return;
             case CommandNames.InitializeMove:
-                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.GenerateMoveSpaces:
-                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Attack:
-                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); CheckIfUnitFinishedTurn(_unit); };
                 _payload.actingUnit.PerformAction(CommandsToActions[CommandNames.Attack], _payload.targetTile, actionFinishedCallback);
                 return;
             case CommandNames.InitializeAttack:
-                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); };
                 _payload.actingUnit.GenerateActSpaces(ActionNames.Attack);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.EndTurn:
-                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); CheckIfUnitFinishedTurn(_unit); };
                 _payload.actingUnit.EndActions();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Cancel:
-                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); };
                 _payload.actingUnit.EraseSpaces();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Revert:
-                actionFinishedCallback = (_unit) => { DeselectUnit();  _payload.PerformCallbacks(); SucceededAction(_unit); };
+                actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); };
                 _payload.actingUnit.EraseSpaces();
                 actionFinishedCallback(_payload.actingUnit);
                 return;
@@ -215,7 +215,7 @@ public class Commander
     /// <summary>
     /// Called after a unit finishes their action.
     /// </summary>
-    public void SucceededAction(Unit _unit)
+    public void CheckIfUnitFinishedTurn(Unit _unit)
     {
         if (_unit.QueryEndOfTurn())
         {

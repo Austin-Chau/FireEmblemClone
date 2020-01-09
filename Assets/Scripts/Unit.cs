@@ -72,12 +72,13 @@ public class Unit : MonoBehaviour
     private float inverseMoveTime;
     private bool spent;
 
+    private int maxAttackRangeForAttackCheck = 2; //Placeholder variable
 
     private Dictionary<Tile, int> moveTree;
     private Dictionary<int, List<Tile>> attackTree;
 
-    private Dictionary<ActionNames, bool> phaseFlags = new Dictionary<ActionNames, bool>(); //moved, attacked, etc
-    private Dictionary<ActionNames, bool> phaseActiveFlags = new Dictionary<ActionNames, bool>(); //moving, attacking, etc
+    private Dictionary<ActionNames, bool> actionsPerformedFlags = new Dictionary<ActionNames, bool>(); //moved, attacked, etc
+    private Dictionary<ActionNames, bool> actionsPerformingFlags = new Dictionary<ActionNames, bool>(); //moving, attacking, etc
 
     #endregion
 
@@ -88,18 +89,18 @@ public class Unit : MonoBehaviour
         inverseMoveTime = 1f / moveTime;
         foreach (ActionNames action in (ActionNames[]) Enum.GetValues(typeof(ActionNames)))
         {
-            phaseFlags[action] = false;
-            phaseActiveFlags[action] = false;
+            actionsPerformedFlags[action] = false;
+            actionsPerformingFlags[action] = false;
         }
     }
 
     public bool GetPhaseFlag(ActionNames action)
     {
-        return phaseFlags[action];
+        return actionsPerformedFlags[action];
     }
     public bool GetActivePhaseFlag(ActionNames action)
     {
-        return phaseActiveFlags[action];
+        return actionsPerformingFlags[action];
     }
 
     /// <summary>
@@ -109,9 +110,9 @@ public class Unit : MonoBehaviour
     public bool IsPerformingAction()
     {
         bool Bool = false;
-        foreach (ActionNames action in phaseActiveFlags.Keys)
+        foreach (ActionNames action in actionsPerformingFlags.Keys)
         {
-            Bool |= phaseActiveFlags[action];
+            Bool |= actionsPerformingFlags[action];
         }
         return Bool;
     }
@@ -126,7 +127,7 @@ public class Unit : MonoBehaviour
 
         if (_commander.Team == Team.Player2)
         {
-            GetComponent<SpriteRenderer>().flipX = true;
+            transform.Find("Sprite").GetComponent<SpriteRenderer>().flipX = true;
         }
         Commander = _commander;
         currentTile = _spawnTile;
@@ -168,11 +169,42 @@ public class Unit : MonoBehaviour
     public List<ActionNames> GetAllPossibleActions()
     {
         List<ActionNames> list = new List<ActionNames>();
-        foreach (KeyValuePair<ActionNames, bool> pair in phaseFlags)
+        foreach (KeyValuePair<ActionNames, bool> pair in actionsPerformedFlags)
         {
-            if (!pair.Value)
+            if (pair.Value)
             {
-                list.Add(pair.Key);
+                continue;
+            }
+            switch(pair.Key)
+            {
+                case ActionNames.Attack:
+                    bool targetsExist = false;
+                    for (int i = 1; i <= maxAttackRangeForAttackCheck; i++)
+                    {
+                        if (targetsExist)
+                        {
+                            break;
+                        }
+                        foreach (Tile tile in GameManager.instance.Board.GenerateDiamond(i, currentTile))
+                        {
+                            if (targetsExist)
+                            {
+                                break;
+                            }
+                            if (tile.CurrentUnit != null && tile.CurrentUnit.Team != Team) //&& ping if attack is possible
+                            {
+                                targetsExist = true;
+                            }
+                        }
+                    }
+                    if (targetsExist)
+                    {
+                        list.Add(pair.Key);
+                    }
+                    break;
+                default:
+                    list.Add(pair.Key);
+                    break;
             }
         }
 
@@ -189,11 +221,11 @@ public class Unit : MonoBehaviour
     {
         //Debug.Log("reset states");
         pastTile = currentTile;
-        List<ActionNames> keys = new List<ActionNames>(phaseFlags.Keys);
+        List<ActionNames> keys = new List<ActionNames>(actionsPerformedFlags.Keys);
         foreach (ActionNames action in keys)
         {
-            phaseFlags[action] = false;
-            phaseActiveFlags[action] = false;
+            actionsPerformedFlags[action] = false;
+            actionsPerformingFlags[action] = false;
         }
         Spent = false;
         EraseSpaces();
@@ -204,11 +236,7 @@ public class Unit : MonoBehaviour
     /// </summary>
     public bool QueryEndOfTurn()
     {
-        bool Bool = true;
-        foreach (KeyValuePair<ActionNames, bool> pair in phaseFlags)
-        {
-            Bool &= pair.Value;
-        }
+        bool Bool = (GetAllPossibleActions().Count == 0);
         if (Bool)
         {
             Spent = true;
@@ -222,11 +250,11 @@ public class Unit : MonoBehaviour
     public void EndActions()
     {
         pastTile = currentTile;
-        List<ActionNames> keys = new List<ActionNames>(phaseFlags.Keys);
+        List<ActionNames> keys = new List<ActionNames>(actionsPerformedFlags.Keys);
         foreach (ActionNames action in keys)
         {
-            phaseFlags[action] = true;
-            phaseActiveFlags[action] = false;
+            actionsPerformedFlags[action] = true;
+            actionsPerformingFlags[action] = false;
         }
         Spent = true;
         EraseSpaces();
@@ -326,12 +354,23 @@ public class Unit : MonoBehaviour
     /// </summary>
     public void EraseSpaces()
     {
-        Debug.Log("erasing spaces");
+        //Debug.Log("erasing spaces");
         foreach (KeyValuePair<Tile, ActionSpace> pair in actionSpaces)
         {
             pair.Value.Delete();
         }
         actionSpaces.Clear();
+    }
+
+    /// <summary>
+    /// Makes the actionspaces invisible.
+    /// </summary>
+    public void HideSpaces()
+    {
+        foreach (KeyValuePair<Tile, ActionSpace> pair in actionSpaces)
+        {
+            pair.Value.Hide();
+        }
     }
     #endregion
 
@@ -352,7 +391,8 @@ public class Unit : MonoBehaviour
     /// <returns></returns>
     public void PerformAction(ActionNames _actionName, Tile _targetTile, Action<Unit> _commanderCallback)
     {
-        ActionCallbackContainer actionCallbackContainer = new ActionCallbackContainer(_commanderCallback, EraseSpaces, this);
+        Action unitCallback = () => { Debug.Log("Setting phaseFlag to true"); actionsPerformedFlags[_actionName] = true; EraseSpaces(); };
+        ActionCallbackContainer actionCallbackContainer = new ActionCallbackContainer(_commanderCallback, unitCallback, this);
         switch (_actionName)
         {
             case (ActionNames.Move):
@@ -388,8 +428,8 @@ public class Unit : MonoBehaviour
                     pair.Key(pair.Value);
                 }
             }
-            commanderCallback(unit);
             unitCallback();
+            commanderCallback(unit);
         }
     }
 
@@ -466,18 +506,17 @@ public class Unit : MonoBehaviour
     {
         if (steps.Count > 0)
         {
-            phaseActiveFlags[ActionNames.Move] = true;
+            actionsPerformingFlags[ActionNames.Move] = true;
             pastTile = currentTile;
             currentTile.CurrentUnit = null;
             foreach (Tile step in steps)
             {
                 yield return StartCoroutine(SmoothMovement(step));
             }
-            phaseActiveFlags[ActionNames.Move] = false;
+            actionsPerformingFlags[ActionNames.Move] = false;
             currentTile.CurrentUnit = this;
         }
         _callbackContainer.PerformCallback();
-        phaseFlags[ActionNames.Move] = true;
     }
 
     /// <summary>
@@ -508,7 +547,8 @@ public class Unit : MonoBehaviour
     /// <param name="_tile"></param>
     private void Attack(Tile _tile, ActionCallbackContainer _callbackContainer)
     {
-        phaseFlags[ActionNames.Attack] = true;
+        actionsPerformedFlags[ActionNames.Attack] = true;
+        HideSpaces();
 
         Vector2Int dir = Pathfinding.GetTileDirectionVector(currentTile, _tile);
         Debug.Log(dir);
