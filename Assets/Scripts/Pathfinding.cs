@@ -48,7 +48,8 @@ public static class Pathfinding
     /// <returns>The list of positions.</returns>
     /// <param name="unitTile">Current position in integer coordinates of the unit.</param>
     /// <param name="moveRadius">Move radius of the unit.</param>
-    public static Dictionary<Tile, int> GenerateMoveTree(Tile unitTile, int moveRadius)
+    /// <param name="team">Team that the unit generating movetree is on</param>
+    public static Dictionary<Tile, int> GenerateMoveTree(Tile unitTile, int moveRadius, Team team)
     {
         Dictionary<Tile, int> tileDistances = new Dictionary<Tile, int>();
         int moveCounter = 0;
@@ -56,13 +57,13 @@ public static class Pathfinding
         tileDistances[unitTile] = 0;
 
         FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
+                unitTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, team);
         FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances);
+                unitTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, team);
         FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances);
+                unitTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, team);
         FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances);
+                unitTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, team);
         
         return tileDistances;
     }
@@ -109,23 +110,31 @@ public static class Pathfinding
     /// <param name="moveRadius">Limit that unit can move</param>
     /// <param name="currentTile">Tile currently being checked</param>
     /// <param name="tileDistances">A dictionary of tiles with their distances</param>
-    private static void FloodFill(int count, int moveRadius, Tile currentTile, Dictionary<Tile, int> tileDistances)
+    /// <param name="team">Team that unit is from, should be passed from starting function</param>
+    private static void FloodFill(int count, int moveRadius, Tile currentTile, Dictionary<Tile, int> tileDistances, Team team)
     {
         if (currentTile == null)
         {
             return;
         }
+
         int distanceFromOrigin = currentTile.MovementWeight + count;
+
         //Debug.Log(distanceFromOrigin);
         //If going to the tile would go over the moveRadius, don't add to the list
         if (distanceFromOrigin > moveRadius)
         {
-            Debug.Log("Tile" + currentTile.GridPosition + " is farther than the origin");
+            //Debug.Log("Tile" + currentTile.GridPosition + " is farther than the origin");
             return;
         }
+
+        //If not on same team, this counts as an obstacle and can not be passed through.
+        if (currentTile.Occupied && currentTile.CurrentUnit.Team != team)
+            return;
+
         if (tileDistances.ContainsKey(currentTile))
         {
-            Debug.Log("Tile " + currentTile.GridPosition + " already in dictionary");
+            //Debug.Log("Tile " + currentTile.GridPosition + " already in dictionary");
             if (tileDistances[currentTile] > count)
                 tileDistances[currentTile] = count;
             else
@@ -134,15 +143,16 @@ public static class Pathfinding
 
         //Otherwise, add to the list and check the adjacent tiles
         tileDistances[currentTile] = distanceFromOrigin;
-        Debug.Log(currentTile.GridPosition + " added");
+        
+        //Debug.Log(currentTile.GridPosition + " added");
 
         FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
+                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, team);
         FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances);
+                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, team);
         FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances);
+                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, team);
         FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances);
+                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, team);
     }
 }

@@ -189,7 +189,7 @@ public class Unit : MonoBehaviour, IDamageableObject
     /// <returns></returns>
     public Dictionary<Tile, int> GetMoveTree()
     {
-        Dictionary<Tile, int> tree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
+        Dictionary<Tile, int> tree = Pathfinding.GenerateMoveTree(currentTile, moveRadius, Team);
         return tree;
     }
 
@@ -351,15 +351,19 @@ public class Unit : MonoBehaviour, IDamageableObject
         switch (_action)
         {
             case ActionNames.Move:
-                moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius); //add checks for if this changes between drawing squares and metamove
+                moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius, Team); //add checks for if this changes between drawing squares and metamove
                 foreach (KeyValuePair<Tile, int> pair in moveTree)
                 {
-                    Vector3 position = pair.Key.Position;
-                    ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
-                    moveSpaceScript.parentUnit = this;
-                    moveSpaceScript.currentTile = pair.Key;
-                    moveSpaceScript.command = CommandNames.Move;
-                    spaces[pair.Key] = moveSpaceScript;
+                    //Checks if there's a unit already on the tile before adding to the move tree.
+                    if (!pair.Key.Occupied)
+                    {
+                        Vector3 position = pair.Key.Position;
+                        ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
+                        moveSpaceScript.parentUnit = this;
+                        moveSpaceScript.currentTile = pair.Key;
+                        moveSpaceScript.command = CommandNames.Move;
+                        spaces[pair.Key] = moveSpaceScript;
+                    }
                 }
                 break;
             case ActionNames.Attack:
@@ -484,7 +488,7 @@ public class Unit : MonoBehaviour, IDamageableObject
     private void MetaMove(Tile destinationTile, ActionCallbackContainer _callbackContainer)
     {
         Debug.Log("MetaMove called");
-        moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
+        moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius, Team);
         Stack<Tile> steps = Pathfinding.GenerateSteps(currentTile, destinationTile, moveTree);
 
         //Now, given a list of unit vectors, 
