@@ -120,18 +120,21 @@ public static class Pathfinding
         //If going to the tile would go over the moveRadius, don't add to the list
         if (distanceFromOrigin > moveRadius)
         {
-            //Debug.Log("farther than the origin");
+            Debug.Log("Tile" + currentTile.GridPosition + " is farther than the origin");
             return;
         }
         if (tileDistances.ContainsKey(currentTile))
         {
-            //Debug.Log("already have that tile");
-            //Replace if the distance is lower?
-            return;
+            Debug.Log("Tile " + currentTile.GridPosition + " already in dictionary");
+            if (tileDistances[currentTile] > count)
+                tileDistances[currentTile] = count;
+            else
+                return;
         }
 
         //Otherwise, add to the list and check the adjacent tiles
         tileDistances[currentTile] = distanceFromOrigin;
+        Debug.Log(currentTile.GridPosition + " added");
 
         FloodFill(distanceFromOrigin, moveRadius,
                 currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
