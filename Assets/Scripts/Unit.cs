@@ -5,7 +5,7 @@ using System;
 
 public class Unit : MonoBehaviour, IDamageableObject
 {
-    
+
 
     #region Public Variables
     public GameObject MoveSpace;
@@ -17,7 +17,14 @@ public class Unit : MonoBehaviour, IDamageableObject
 
 
     public int MaxHealth { get; private set; }
-    public int CurrentHealth { get; private set; }
+    public int CurrentHealth {
+        get { return currentHealth; }
+        private set {
+            if(healthBar != null)
+                healthBar.ChangeHealthbar(value);
+            currentHealth = value;
+        }
+    }
     public int Strength { get; private set; }
     public int Defence { get; private set; }
     public int Movement { get; private set; }
@@ -80,6 +87,7 @@ public class Unit : MonoBehaviour, IDamageableObject
 
     private float inverseMoveTime;
     private bool spent;
+    private int currentHealth;
 
     private int maxAttackRangeForAttackCheck = 2; //Placeholder variable
 
@@ -134,7 +142,7 @@ public class Unit : MonoBehaviour, IDamageableObject
     /// </summary>
     /// <param name="_spawnTile">The tile the unit should be on.</param>
     /// <param name="_commander">The commander that commands this unit.</param>
-    public Unit InitializeUnit(Tile _spawnTile, Commander _commander)
+    public Unit InitializeUnit(Tile _spawnTile, Commander _commander, UnitStats stats)
     {
 
         if (_commander.Team == Team.Player2)
@@ -146,17 +154,22 @@ public class Unit : MonoBehaviour, IDamageableObject
         pastTile = currentTile;
         transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
-        CreateHealthBar();
+
+        Strength = stats.Strength;
+        MaxHealth = stats.MaxHealth;
+        CurrentHealth = stats.CurrentHealth;
+        Defence = stats.Defence;
+        Movement = stats.Movement;
+
+        //Make the healthbar
+        GameObject go = Instantiate(Resources.Load<GameObject>(HealthBarLocation));
+        healthBar = go.GetComponent<UnitHealthBar>();
+        healthBar.Initialize(MaxHealth, stats.CurrentHealth, this);
+        
         ResetStates();
         return this;
     }
 
-    void CreateHealthBar()
-    {
-        GameObject go = Instantiate(Resources.Load<GameObject>(HealthBarLocation));
-        healthBar = go.GetComponent<UnitHealthBar>();
-        healthBar.Initialize(MaxHealth, this);
-    }
 
     #region DamageableObjectInterface
 

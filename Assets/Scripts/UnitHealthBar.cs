@@ -12,18 +12,6 @@ public class UnitHealthBar : MonoBehaviour
     Unit unit;
 
     const float unitOffset = 20f;
-    /// <summary>
-    /// Initialize health numbers with health at max
-    /// </summary>
-    /// <param name="maxHealth">Max HP for health bar</param>
-    public void Initialize(int maxHealth, Unit _unit)
-    {
-        slider = GetComponent<Slider>();
-        slider.maxValue = maxHealth;
-        slider.value = maxHealth;
-        unit = _unit;
-        transform.parent = GameObject.Find("UnitHealthBars").transform;
-    }
 
     /// <summary>
     /// Initialize health numbers with health starting at less than max
