@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-public class Unit : MonoBehaviour
+public class Unit : MonoBehaviour, IDamageableObject
 {
+
 
     #region Public Variables
     public GameObject MoveSpace;
@@ -13,6 +14,20 @@ public class Unit : MonoBehaviour
     public float moveTime = 0.1f;
     public int actRadius = 1;
     public int moveRadius = 3;
+
+
+    public int MaxHealth { get; private set; }
+    public int CurrentHealth {
+        get { return currentHealth; }
+        private set {
+            if(healthBar != null)
+                healthBar.ChangeHealthbar(value);
+            currentHealth = value;
+        }
+    }
+    public int Strength { get; private set; }
+    public int Defence { get; private set; }
+    public int Movement { get; private set; }
 
     public Action currentAction;
 
@@ -68,9 +83,11 @@ public class Unit : MonoBehaviour
 
     private Animator animator;
     private Rigidbody2D rb2D;
+    private UnitHealthBar healthBar;
 
     private float inverseMoveTime;
     private bool spent;
+    private int currentHealth;
 
     private int maxAttackRangeForAttackCheck = 2; //Placeholder variable
 
@@ -79,6 +96,8 @@ public class Unit : MonoBehaviour
 
     private Dictionary<ActionNames, bool> actionsPerformedFlags = new Dictionary<ActionNames, bool>(); //moved, attacked, etc
     private Dictionary<ActionNames, bool> actionsPerformingFlags = new Dictionary<ActionNames, bool>(); //moving, attacking, etc
+
+    private const string HealthBarLocation = "Prefabs/GUI/UnitHealthBar";
 
     private MovementTypes movementType = MovementTypes.Ground;
 
@@ -94,6 +113,7 @@ public class Unit : MonoBehaviour
             actionsPerformedFlags[action] = false;
             actionsPerformingFlags[action] = false;
         }
+
     }
 
     public bool GetPhaseFlag(ActionNames action)
@@ -124,7 +144,7 @@ public class Unit : MonoBehaviour
     /// </summary>
     /// <param name="_spawnTile">The tile the unit should be on.</param>
     /// <param name="_commander">The commander that commands this unit.</param>
-    public Unit InitializeUnit(Tile _spawnTile, Commander _commander)
+    public Unit InitializeUnit(Tile _spawnTile, Commander _commander, UnitStats stats)
     {
 
         if (_commander.Team == Team.Player2)
@@ -136,9 +156,32 @@ public class Unit : MonoBehaviour
         pastTile = currentTile;
         transform.position = currentTile.Position;
         currentTile.CurrentUnit = this;
+
+        Strength = stats.Strength;
+        MaxHealth = stats.MaxHealth;
+        CurrentHealth = stats.CurrentHealth;
+        Defence = stats.Defence;
+        Movement = stats.Movement;
+
+        //Make the healthbar
+        GameObject go = Instantiate(Resources.Load<GameObject>(HealthBarLocation));
+        healthBar = go.GetComponent<UnitHealthBar>();
+        healthBar.Initialize(MaxHealth, stats.CurrentHealth, this);
+        
         ResetStates();
         return this;
     }
+
+
+    #region DamageableObjectInterface
+
+
+    public void TakeDamage(int AttackingStrength)
+    {
+        CurrentHealth -= AttackingStrength - Defence;
+    }
+
+    #endregion
 
     #region Data Access Methods
 
@@ -313,12 +356,16 @@ public class Unit : MonoBehaviour
                 moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false, false, Team); //add checks for if this changes between drawing squares and metamove
                 foreach (KeyValuePair<Tile, int> pair in moveTree)
                 {
-                    Vector3 position = pair.Key.Position;
-                    ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
-                    moveSpaceScript.parentUnit = this;
-                    moveSpaceScript.currentTile = pair.Key;
-                    moveSpaceScript.command = CommandNames.Move;
-                    spaces[pair.Key] = moveSpaceScript;
+                    //Checks if there's a unit already on the tile before adding to the move tree.
+                    if (!pair.Key.Occupied)
+                    {
+                        Vector3 position = pair.Key.Position;
+                        ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
+                        moveSpaceScript.parentUnit = this;
+                        moveSpaceScript.currentTile = pair.Key;
+                        moveSpaceScript.command = CommandNames.Move;
+                        spaces[pair.Key] = moveSpaceScript;
+                    }
                 }
                 break;
             case ActionNames.Attack:
@@ -559,7 +606,12 @@ public class Unit : MonoBehaviour
         animator.GetBehaviour<PlayerAttackBehaviour>().callbackContainer = _callbackContainer;
 
         animator.SetTrigger("playerAttack");
-        _tile.CurrentUnit.SetHitTrigger();
+
+
+        if (_tile.Occupied)
+        {
+            _tile.CurrentUnit.TakeDamage(Strength);
+        }
 
 
     }
@@ -581,6 +633,7 @@ public class Unit : MonoBehaviour
         }
         return returnDict;
     }
+    
     #endregion
     #endregion
 }

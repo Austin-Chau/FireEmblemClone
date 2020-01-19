@@ -159,7 +159,9 @@ public class GameManager : MonoBehaviour
             remainingActableUnits.Add(_unit);
         }
 
-        _unit.InitializeUnit(_spawnTile, _commander);
+        UnitStats stats = new UnitStats(5, 20, 2, 3);
+
+        _unit.InitializeUnit(_spawnTile, _commander, stats);
         return true;
     }
 
@@ -181,7 +183,10 @@ public class GameManager : MonoBehaviour
             remainingActableUnits.Add(_unit);
         }
 
-        _unit.InitializeUnit(_unit.currentTile, _commander);
+
+        UnitStats stats = new UnitStats(5, 20, 2, 3);
+
+        _unit.InitializeUnit(_unit.currentTile, _commander, stats);
         return true;
     }
 

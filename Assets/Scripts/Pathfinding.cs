@@ -131,19 +131,23 @@ public static class Pathfinding
         //If include fringes is true, actually add this tile.
         if (distanceFromOrigin > radius || (!ignoreEnemies && currentTile.Occupied && currentTile.CurrentUnit.Team != team) && !includeFringes)
         {
-            //Debug.Log("farther than the origin");
+            //Debug.Log("Tile" + currentTile.GridPosition + " is farther than the origin");
             return;
         }
 
         if (tileDistances.ContainsKey(currentTile))
         {
-            //Debug.Log("already have that tile");
-            //Replace if the distance is lower?
-            return;
+            //Debug.Log("Tile " + currentTile.GridPosition + " already in dictionary");
+            if (tileDistances[currentTile] > count)
+                tileDistances[currentTile] = count;
+            else
+                return;
         }
 
         //Otherwise, add to the list and check the adjacent tiles
         tileDistances[currentTile] = distanceFromOrigin;
+        
+        //Debug.Log(currentTile.GridPosition + " added");
 
         //We stop for sure here.
         if (distanceFromOrigin >= radius)
