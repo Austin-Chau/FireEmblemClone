@@ -48,7 +48,11 @@ public static class Pathfinding
     /// <returns>The list of positions.</returns>
     /// <param name="sourceTile">Current position in integer coordinates of the unit.</param>
     /// <param name="radius">Move radius of the unit.</param>
-    public static Dictionary<Tile, int> GenerateTileTree(Tile sourceTile, int radius, MovementTypes movementType, bool includeFringes)
+    /// <param name="movementType">What type of movement.</param>
+    /// <param name="includeFringes">Should the final tile >= the radius be included?</param>
+    /// <param name="ignoreEnemies">Should this floodfill ignore enemies.</param>
+    /// <param name="team">What team this floodfill is in the name of.</param>
+    public static Dictionary<Tile, int> GenerateTileTree(Tile sourceTile, int radius, MovementTypes movementType, bool includeFringes, bool ignoreEnemies, Team team)
     {
         Dictionary<Tile, int> tileDistances = new Dictionary<Tile, int>();
         int moveCounter = 0;
@@ -56,13 +60,13 @@ public static class Pathfinding
         tileDistances[sourceTile] = 0;
 
         FloodFill(moveCounter, radius,
-                sourceTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, movementType, includeFringes);
+                sourceTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         FloodFill(moveCounter, radius,
-                sourceTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, movementType, includeFringes);
+                sourceTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         FloodFill(moveCounter, radius,
-                sourceTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, movementType, includeFringes);
+                sourceTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         FloodFill(moveCounter, radius,
-                sourceTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, movementType, includeFringes);
+                sourceTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         
         return tileDistances;
     }
@@ -111,7 +115,7 @@ public static class Pathfinding
     /// <param name="tileDistances">A dictionary of tiles with their distances</param>
     /// <param name="movementType">What type of traversal is being performed</param>
     /// <param name="includeFringes">Should the last tiles that are >= radius be included?</param>
-    private static void FloodFill(int count, int radius, Tile currentTile, Dictionary<Tile, int> tileDistances, MovementTypes movementType, bool includeFringes)
+    private static void FloodFill(int count, int radius, Tile currentTile, Dictionary<Tile, int> tileDistances, MovementTypes movementType, bool includeFringes, bool ignoreEnemies, Team team)
     {
         if (currentTile == null)
         {
@@ -122,8 +126,10 @@ public static class Pathfinding
 
         distanceFromOrigin += currentTile.MovementWeights[movementType];
 
-        //If going to the tile would go over the moveRadius, don't add to the list. If include fringes is true, actually add this tile.
-        if (distanceFromOrigin > radius && !includeFringes)
+        //If going to the tile would go over the moveRadius, don't add to the list and stop the recursion.
+        //If the tile includes an enemy unit and we do not wish to ignore them, don't add it to the list and stop the recursion.
+        //If include fringes is true, actually add this tile.
+        if (distanceFromOrigin > radius || (!ignoreEnemies && currentTile.Occupied && currentTile.CurrentUnit.Team != team) && !includeFringes)
         {
             //Debug.Log("farther than the origin");
             return;
@@ -146,12 +152,12 @@ public static class Pathfinding
         }
 
         FloodFill(distanceFromOrigin, radius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, movementType, includeFringes);
+                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         FloodFill(distanceFromOrigin, radius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, movementType, includeFringes);
+                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         FloodFill(distanceFromOrigin, radius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, movementType, includeFringes);
+                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, movementType, includeFringes, ignoreEnemies, team);
         FloodFill(distanceFromOrigin, radius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, movementType, includeFringes);
+                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, movementType, includeFringes, ignoreEnemies, team);
     }
 }

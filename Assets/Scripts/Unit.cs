@@ -148,7 +148,7 @@ public class Unit : MonoBehaviour
     /// <returns></returns>
     public Dictionary<Tile, int> GetMoveTree()
     {
-        Dictionary<Tile, int> tree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false);
+        Dictionary<Tile, int> tree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false, false, Team);
         return tree;
     }
 
@@ -310,7 +310,7 @@ public class Unit : MonoBehaviour
         switch (_action)
         {
             case ActionNames.Move:
-                moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false); //add checks for if this changes between drawing squares and metamove
+                moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false, false, Team); //add checks for if this changes between drawing squares and metamove
                 foreach (KeyValuePair<Tile, int> pair in moveTree)
                 {
                     Vector3 position = pair.Key.Position;
@@ -440,7 +440,7 @@ public class Unit : MonoBehaviour
     private void MetaMove(Tile destinationTile, ActionCallbackContainer _callbackContainer)
     {
         Debug.Log("MetaMove called");
-        moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false);
+        moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false, false, Team);
         Stack<Tile> steps = Pathfinding.GenerateSteps(currentTile, destinationTile, moveTree);
 
         //Now, given a list of unit vectors, 
@@ -572,7 +572,7 @@ public class Unit : MonoBehaviour
     private Dictionary<Tile, int> GetAttackTree()
     {
         Dictionary<Tile, int> returnDict = new Dictionary<Tile, int>();
-        foreach (KeyValuePair<Tile, int> pair in Pathfinding.GenerateTileTree(currentTile, 2, MovementTypes.Flying, true))
+        foreach (KeyValuePair<Tile, int> pair in Pathfinding.GenerateTileTree(currentTile, 2, MovementTypes.Flying, true, true, Team))
         {
             if (pair.Key.CurrentUnit != null && pair.Key.CurrentUnit.Team != Team)
             {
