@@ -51,3 +51,10 @@ public enum MenuBufferingType
     Initial,
     Full
 }
+
+public enum MovementTypes
+{
+    None,
+    Ground,
+    Flying
+}

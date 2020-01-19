@@ -75,10 +75,12 @@ public class Unit : MonoBehaviour
     private int maxAttackRangeForAttackCheck = 2; //Placeholder variable
 
     private Dictionary<Tile, int> moveTree;
-    private Dictionary<int, List<Tile>> attackTree;
+    private Dictionary<Tile, int> attackTree;
 
     private Dictionary<ActionNames, bool> actionsPerformedFlags = new Dictionary<ActionNames, bool>(); //moved, attacked, etc
     private Dictionary<ActionNames, bool> actionsPerformingFlags = new Dictionary<ActionNames, bool>(); //moving, attacking, etc
+
+    private MovementTypes movementType = MovementTypes.Ground;
 
     #endregion
 
@@ -146,7 +148,7 @@ public class Unit : MonoBehaviour
     /// <returns></returns>
     public Dictionary<Tile, int> GetMoveTree()
     {
-        Dictionary<Tile, int> tree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
+        Dictionary<Tile, int> tree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false);
         return tree;
     }
 
@@ -308,7 +310,7 @@ public class Unit : MonoBehaviour
         switch (_action)
         {
             case ActionNames.Move:
-                moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius); //add checks for if this changes between drawing squares and metamove
+                moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false); //add checks for if this changes between drawing squares and metamove
                 foreach (KeyValuePair<Tile, int> pair in moveTree)
                 {
                     Vector3 position = pair.Key.Position;
@@ -320,24 +322,21 @@ public class Unit : MonoBehaviour
                 }
                 break;
             case ActionNames.Attack:
-                attackTree = GenerateAttackTree(currentTile);
-                foreach (KeyValuePair<int,List<Tile>> pair in attackTree)
+                attackTree = GetAttackTree();
+                foreach (KeyValuePair<Tile,int> pair in attackTree)
                 {
-                    foreach (Tile tile in pair.Value)
+                    if (spaces.ContainsKey(pair.Key) && spaces[pair.Key] != null)
                     {
-                        if (spaces.ContainsKey(tile) && spaces[tile] != null)
-                        {
-                            //maybe add on some extra flags
-                        }
-                        else
-                        {
-                            Vector3 position = tile.Position;
-                            ActionSpace attackSpaceScript = Instantiate(ActSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
-                            attackSpaceScript.parentUnit = this;
-                            attackSpaceScript.currentTile = tile;
-                            attackSpaceScript.command = CommandNames.Attack;
-                            spaces[tile] = attackSpaceScript;
-                        }
+                        //maybe add on some extra flags
+                    }
+                    else
+                    {
+                        Vector3 position = pair.Key.Position;
+                        ActionSpace attackSpaceScript = Instantiate(ActSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
+                        attackSpaceScript.parentUnit = this;
+                        attackSpaceScript.currentTile = pair.Key;
+                        attackSpaceScript.command = CommandNames.Attack;
+                        spaces[pair.Key] = attackSpaceScript;
                     }
                 }
                 break;
@@ -441,7 +440,7 @@ public class Unit : MonoBehaviour
     private void MetaMove(Tile destinationTile, ActionCallbackContainer _callbackContainer)
     {
         Debug.Log("MetaMove called");
-        moveTree = Pathfinding.GenerateMoveTree(currentTile, moveRadius);
+        moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false);
         Stack<Tile> steps = Pathfinding.GenerateSteps(currentTile, destinationTile, moveTree);
 
         //Now, given a list of unit vectors, 
@@ -570,23 +569,16 @@ public class Unit : MonoBehaviour
     /// </summary>
     /// <param name="_currentTile"></param>
     /// <returns></returns>
-    private Dictionary<int,List<Tile>> GenerateAttackTree(Tile _currentTile)
+    private Dictionary<Tile, int> GetAttackTree()
     {
-        Dictionary<int, List<Tile>> returnDict = new Dictionary<int, List<Tile>>();
-        //foreach (weapon in unit's weapons)
-        List<Tile> list0 = new List<Tile>();
-        for (int i = 1; i <= 2; i++) //this weapon can hit 1 tile away, or 2 tiles away
+        Dictionary<Tile, int> returnDict = new Dictionary<Tile, int>();
+        foreach (KeyValuePair<Tile, int> pair in Pathfinding.GenerateTileTree(currentTile, 2, MovementTypes.Flying, true))
         {
-            foreach (Tile tile in GameManager.instance.Board.GenerateDiamond(i, _currentTile))
+            if (pair.Key.CurrentUnit != null && pair.Key.CurrentUnit.Team != Team)
             {
-                if (tile.CurrentUnit != null && tile.CurrentUnit.Team != Team)
-                {
-                    //Debug.Log(tile.GridPosition);
-                    list0.Add(tile);
-                }
+                returnDict[pair.Key] = pair.Value;
             }
         }
-        returnDict[0] = list0;
         return returnDict;
     }
     #endregion

@@ -43,26 +43,26 @@ public static class Pathfinding
     }
 
     /// <summary>
-    /// Generates all the tiles a unit can move too. 
+    /// Generates a floodfill of tiles.
     /// </summary>
     /// <returns>The list of positions.</returns>
-    /// <param name="unitTile">Current position in integer coordinates of the unit.</param>
-    /// <param name="moveRadius">Move radius of the unit.</param>
-    public static Dictionary<Tile, int> GenerateMoveTree(Tile unitTile, int moveRadius)
+    /// <param name="sourceTile">Current position in integer coordinates of the unit.</param>
+    /// <param name="radius">Move radius of the unit.</param>
+    public static Dictionary<Tile, int> GenerateTileTree(Tile sourceTile, int radius, MovementTypes movementType, bool includeFringes)
     {
         Dictionary<Tile, int> tileDistances = new Dictionary<Tile, int>();
         int moveCounter = 0;
 
-        tileDistances[unitTile] = 0;
+        tileDistances[sourceTile] = 0;
 
-        FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
-        FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances);
-        FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances);
-        FloodFill(moveCounter, moveRadius,
-                unitTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances);
+        FloodFill(moveCounter, radius,
+                sourceTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, movementType, includeFringes);
+        FloodFill(moveCounter, radius,
+                sourceTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, movementType, includeFringes);
+        FloodFill(moveCounter, radius,
+                sourceTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, movementType, includeFringes);
+        FloodFill(moveCounter, radius,
+                sourceTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, movementType, includeFringes);
         
         return tileDistances;
     }
@@ -103,26 +103,32 @@ public static class Pathfinding
     }
 
     /// <summary>
-    /// FloodFill Algorithm for finding distances from a point of origin
+    /// FloodFill Algorithm for finding distances from a point of origin (uses recursion)
     /// </summary>
-    /// <param name="count">Amount of movement units currently moved</param>
-    /// <param name="moveRadius">Limit that unit can move</param>
+    /// <param name="count">Current accumulated distance</param>
+    /// <param name="radius">The max distance we want to flood fill</param>
     /// <param name="currentTile">Tile currently being checked</param>
     /// <param name="tileDistances">A dictionary of tiles with their distances</param>
-    private static void FloodFill(int count, int moveRadius, Tile currentTile, Dictionary<Tile, int> tileDistances)
+    /// <param name="movementType">What type of traversal is being performed</param>
+    /// <param name="includeFringes">Should the last tiles that are >= radius be included?</param>
+    private static void FloodFill(int count, int radius, Tile currentTile, Dictionary<Tile, int> tileDistances, MovementTypes movementType, bool includeFringes)
     {
         if (currentTile == null)
         {
             return;
         }
-        int distanceFromOrigin = currentTile.MovementWeight + count;
-        //Debug.Log(distanceFromOrigin);
-        //If going to the tile would go over the moveRadius, don't add to the list
-        if (distanceFromOrigin > moveRadius)
+
+        int distanceFromOrigin = count;
+
+        distanceFromOrigin += currentTile.MovementWeights[movementType];
+
+        //If going to the tile would go over the moveRadius, don't add to the list. If include fringes is true, actually add this tile.
+        if (distanceFromOrigin > radius && !includeFringes)
         {
             //Debug.Log("farther than the origin");
             return;
         }
+
         if (tileDistances.ContainsKey(currentTile))
         {
             //Debug.Log("already have that tile");
@@ -133,13 +139,19 @@ public static class Pathfinding
         //Otherwise, add to the list and check the adjacent tiles
         tileDistances[currentTile] = distanceFromOrigin;
 
-        FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances);
-        FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances);
-        FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances);
-        FloodFill(distanceFromOrigin, moveRadius,
-                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances);
+        //We stop for sure here.
+        if (distanceFromOrigin >= radius)
+        {
+            return;
+        }
+
+        FloodFill(distanceFromOrigin, radius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Down), tileDistances, movementType, includeFringes);
+        FloodFill(distanceFromOrigin, radius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Left), tileDistances, movementType, includeFringes);
+        FloodFill(distanceFromOrigin, radius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Up), tileDistances, movementType, includeFringes);
+        FloodFill(distanceFromOrigin, radius,
+                currentTile.GetAdjacentTile(AdjacentDirection.Right), tileDistances, movementType, includeFringes);
     }
 }

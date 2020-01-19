@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,8 +28,19 @@ public class Tile
         Position = pos;
         tileObject.transform.parent = parent;
         tileScript = tileObject.GetComponent<TileScript>();
-        if (_type == TileType.Ground) MovementWeight = 1;
-        else MovementWeight = 100;
+        MovementWeights = new Dictionary<MovementTypes, int>();
+        if (_type == TileType.Ground)
+        {
+            MovementWeights[MovementTypes.None] = 1;
+            MovementWeights[MovementTypes.Ground] = 1;
+            MovementWeights[MovementTypes.Flying] = 1;
+        }
+        else
+        {
+            MovementWeights[MovementTypes.None] = 1;
+            MovementWeights[MovementTypes.Ground] = 100;
+            MovementWeights[MovementTypes.Flying] = 1;
+        }
     }
 
     #region Public Variables
@@ -69,7 +81,7 @@ public class Tile
             }
         }
     }
-    public int MovementWeight;
+    public Dictionary<MovementTypes, int> MovementWeights;
     public Vector3 Position { get; private set; }
     public Vector2Int GridPosition { get; private set; }
 
@@ -162,7 +174,7 @@ public class Tile
     /// </summary>
     private void CreateTile()
     {
-        tileObject = Object.Instantiate(
+        tileObject = UnityEngine.Object.Instantiate(
             Resources.Load<GameObject>(TileGameObjectResource));
 
         AttachSpriteToObject();
@@ -196,7 +208,7 @@ public class Tile
         }
 
         tileObject.GetComponent<SpriteRenderer>().sprite =
-            sprites[Random.Range(0, sprites.Length - 1)];
+            sprites[UnityEngine.Random.Range(0, sprites.Length - 1)];
     }
 
     #endregion
