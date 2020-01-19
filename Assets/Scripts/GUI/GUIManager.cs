@@ -15,6 +15,7 @@ public class GUIManager : MonoBehaviour
     private GameObject commandMenuObject;
     private GameObject turnBannerObject;
     private GameObject mainMenuObject;
+    private GameObject unitInspectorObject;
 
     private MenuContainer mainMenuContainer;
 
@@ -82,6 +83,10 @@ public class GUIManager : MonoBehaviour
         turnBannerObject.SetActive(false);
         mainMenuObject = transform.Find("MainMenu").gameObject;
 
+        unitInspectorObject = transform.Find("UnitInspector").gameObject;
+        unitInspectorObject.SetActive(false);
+
+
         mainMenuContainer = GenerateMainMenu();
 
         GUIManagerObject = gameObject;
@@ -95,6 +100,24 @@ public class GUIManager : MonoBehaviour
         else
         {
             actionText.text = "A unit of " + teamNames[_unit.Team] + " is selected";
+        }
+    }
+
+    public void UpdateHoveredUnit(Unit _unit)
+    {
+        if (_unit == null)
+        {
+            unitInspectorObject.SetActive(false);
+        }
+        else
+        {
+            unitInspectorObject.SetActive(true);
+            unitInspectorObject.transform.Find("Name").GetComponent<Text>().text = _unit.Name;
+            unitInspectorObject.transform.Find("Team").GetComponent<Text>().text = teamNames[_unit.Team];
+            unitInspectorObject.transform.Find("Health").GetComponent<Text>().text = _unit.CurrentHealth + "/" + _unit.MaxHealth;
+            unitInspectorObject.transform.Find("Strength").GetComponent<Text>().text = _unit.Strength.ToString();
+            unitInspectorObject.transform.Find("Defence").GetComponent<Text>().text = _unit.Defence.ToString();
+            unitInspectorObject.transform.Find("Movement").GetComponent<Text>().text = _unit.Movement.ToString();
         }
     }
 

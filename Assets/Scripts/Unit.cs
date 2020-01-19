@@ -28,6 +28,7 @@ public class Unit : MonoBehaviour, IDamageableObject
     public int Strength { get; private set; }
     public int Defence { get; private set; }
     public int Movement { get; private set; }
+    public string Name = "my name jeff";
 
     public Action currentAction;
 
