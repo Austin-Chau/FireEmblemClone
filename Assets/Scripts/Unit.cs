@@ -23,6 +23,11 @@ public class Unit : MonoBehaviour, IDamageableObject
             if(healthBar != null)
                 healthBar.ChangeHealthbar(value);
             currentHealth = value;
+            if (value <= 0)
+            {
+                GameManager.instance.ReportUnitDeath(this);
+                dead = true;
+            }
         }
     }
     public int Strength { get; private set; }
@@ -86,6 +91,7 @@ public class Unit : MonoBehaviour, IDamageableObject
     private Rigidbody2D rb2D;
     private UnitHealthBar healthBar;
 
+    private bool dead;
     private float inverseMoveTime;
     private bool spent;
     private int currentHealth;
@@ -171,6 +177,15 @@ public class Unit : MonoBehaviour, IDamageableObject
         
         ResetStates();
         return this;
+    }
+
+    /// <summary>
+    /// Deletes this unit's gameobject from the world (and all baggage).
+    /// </summary>
+    public void DeleteGameObjects()
+    {
+        Destroy(healthBar.gameObject);
+        Destroy(gameObject);
     }
 
 
@@ -267,13 +282,16 @@ public class Unit : MonoBehaviour, IDamageableObject
     {
         //Debug.Log("reset states");
         pastTile = currentTile;
-        List<ActionNames> keys = new List<ActionNames>(actionsPerformedFlags.Keys);
-        foreach (ActionNames action in keys)
+        if (!dead)
         {
-            actionsPerformedFlags[action] = false;
-            actionsPerformingFlags[action] = false;
+            List<ActionNames> keys = new List<ActionNames>(actionsPerformedFlags.Keys);
+            foreach (ActionNames action in keys)
+            {
+                actionsPerformedFlags[action] = false;
+                actionsPerformingFlags[action] = false;
+            }
+            Spent = false;
         }
-        Spent = false;
         EraseSpaces();
     }
 

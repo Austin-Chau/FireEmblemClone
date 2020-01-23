@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -34,6 +35,11 @@ public class GameManager : MonoBehaviour
     private const int menuTimerMax = 30;
     private const int menuTimerDelay = 5;
     private int menuTimer = menuTimerMax;
+
+    private WinConditions currentWinCondition = WinConditions.Rout;
+    private Dictionary<Commander, Commander> opponents = new Dictionary<Commander, Commander>();
+
+    private Dictionary<Commander, Dictionary<Unit, bool>> routRoster = new Dictionary<Commander, Dictionary<Unit, bool>>(); //true if dead, false otherwise
     #endregion
 
     #region Constants
@@ -52,10 +58,15 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
         }
         DontDestroyOnLoad(gameObject);
+
         BoardScript = GetComponent<BoardManager>();
         Commanders = new List<Commander>();
         Cursor = Instantiate(CursorPrefab).GetComponent<Cursor>();
         GUIManager = Instantiate(GUIManagerPrefab).GetComponent<GUIManager>();
+    }
+
+    private void Start()
+    {
         InitGame();
     }
 
@@ -66,10 +77,39 @@ public class GameManager : MonoBehaviour
     {
         doingSetup = true;
 
+        //reset old game state
+        foreach (KeyValuePair<Commander,List<Unit>> pair in unitRosters)
+        {
+            foreach (Unit unit in pair.Value)
+            {
+                unit.DeleteGameObjects();
+            }
+        }
+
+        opponents = new Dictionary<Commander, Commander>();
+        unitRosters = new Dictionary<Commander, List<Unit>>();
+        routRoster = new Dictionary<Commander, Dictionary<Unit, bool>>();
+        if (Board != null)
+        {
+            Board.DeleteGameObjects();
+        }
+        Board = null;
+        Board.Instance = null;
+
+        Commanders = new List<Commander>();
+        CurrentCommander = null;
+        commanderIndex = 0;
+
+        //SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        Debug.Log("test");
+        //end reset of old game state
+
         Board = BoardScript.SetupScene();
         Commander tempCommander = new Commander(Team.Player1, new PlayerBehavior());
         tempCommander.GameManager = this;
+
         unitRosters[tempCommander] = new List<Unit>();
+        routRoster[tempCommander] = new Dictionary<Unit, bool>();
         Commanders.Add(tempCommander);
         SpawnAndAddUnit(Board.Tiles[0, 0], tempCommander);
         SpawnAndAddUnit(Board.Tiles[0, 1], tempCommander);
@@ -79,8 +119,12 @@ public class GameManager : MonoBehaviour
         tempCommander = new Commander(Team.Player2, new PlayerBehavior());
         tempCommander.GameManager = this;
         unitRosters[tempCommander] = new List<Unit>();
+        routRoster[tempCommander] = new Dictionary<Unit,bool>();
         Commanders.Add(tempCommander);
         SpawnAndAddUnit(Board.Tiles[1, 1], tempCommander);
+
+        opponents[tempCommander] = CurrentCommander;
+        opponents[CurrentCommander] = tempCommander;
 
         Cursor.JumpToTile(unitRosters[CurrentCommander][0].currentTile);
         GUIManager.UpdateCurrentTeam(CurrentCommander);
@@ -141,6 +185,31 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Registers that a unit has died in the gamestate (routroster) for detection by the win condition.
+    /// </summary>
+    /// <param name="_unit"></param>
+    public void ReportUnitDeath(Unit _unit)
+    {
+        routRoster[_unit.Commander][_unit] = true;
+        if (currentWinCondition != WinConditions.Rout)
+        {
+            return;
+        }
+
+        bool cumulative = true;
+
+        foreach(KeyValuePair<Unit,bool> pair in routRoster[_unit.Commander])
+        {
+            cumulative &= pair.Value;
+        }
+
+        if (cumulative)
+        {
+            EndGame(opponents[_unit.Commander]);
+        }
+    }
+
+    /// <summary>
     /// Adds a unit to this commanders list of units while setting its spawn tile.
     /// </summary>
     /// <param name="_spawnTile">The tile to spawn at</param>
@@ -153,13 +222,14 @@ public class GameManager : MonoBehaviour
             return false;
         }
         unitRosters[_commander].Add(_unit);
+        routRoster[_commander][_unit] = false;
 
         if (CurrentCommander == _commander)
         {
             remainingActableUnits.Add(_unit);
         }
 
-        UnitStats stats = new UnitStats(5, 20, 2, 3);
+        UnitStats stats = new UnitStats(20, 20, 2, 3);
 
         _unit.InitializeUnit(_spawnTile, _commander, stats);
         return true;
@@ -177,6 +247,7 @@ public class GameManager : MonoBehaviour
             return false;
         }
         unitRosters[_commander].Add(_unit);
+        routRoster[_commander][_unit] = false;
 
         if (CurrentCommander == _commander)
         {
@@ -204,6 +275,7 @@ public class GameManager : MonoBehaviour
             return true;
         }
         _unit.Commander = null;
+        routRoster[_commander].Remove(_unit);
         return unitRosters[_commander].Remove(_unit);
     }
 
@@ -276,5 +348,10 @@ public class GameManager : MonoBehaviour
                 GUIManager.StartMainMenu();
                 break;
         }
+    }
+
+    private void EndGame(Commander victor)
+    {
+        GUIManager.VictoryBanner(victor, InitGame);
     }
 }

@@ -90,6 +90,7 @@ public class GUIManager : MonoBehaviour
         mainMenuContainer = GenerateMainMenu();
 
         GUIManagerObject = gameObject;
+        DontDestroyOnLoad(gameObject);
     }
     public void UpdateSelectedUnit(Unit _unit)
     {
@@ -341,6 +342,11 @@ public class GUIManager : MonoBehaviour
     public void TurnBanner(Commander _commander, Action _callback)
     {
         StartCoroutine(TurnBannerCoroutine("Start of " + teamNames[_commander.Team] + "'s turn.", _callback));
+    }
+
+    public void VictoryBanner(Commander _commander, Action _callback)
+    {
+        StartCoroutine(TurnBannerCoroutine(teamNames[_commander.Team] + " is victorious! Restarting game.", _callback));
     }
 
     private IEnumerator<WaitForSeconds> TurnBannerCoroutine(string _bannerText, Action _callback)

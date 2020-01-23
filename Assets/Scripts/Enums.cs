@@ -58,3 +58,9 @@ public enum MovementTypes
     Ground,
     Flying
 }
+
+public enum WinConditions
+{
+    None,
+    Rout
+}

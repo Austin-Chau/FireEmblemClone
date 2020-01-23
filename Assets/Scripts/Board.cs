@@ -42,9 +42,17 @@ public class Board
             rows = _rows;
             columns = _columns;
 
-            boardObject = Object.Instantiate(new GameObject("Board"));
-            WallsParent = Object.Instantiate(new GameObject("Walls"), boardObject.transform).transform;
-            FloorsParent = Object.Instantiate(new GameObject("Floors"), boardObject.transform).transform;
+            GameObject BoardObject = new GameObject("Board");
+            GameObject WallsObject = new GameObject("Walls");
+            GameObject FloorsObject = new GameObject("Floors");
+
+            boardObject = Object.Instantiate(BoardObject);
+            WallsParent = Object.Instantiate(WallsObject, boardObject.transform).transform;
+            FloorsParent = Object.Instantiate(FloorsObject, boardObject.transform).transform;
+
+            Object.Destroy(BoardObject);
+            Object.Destroy(WallsObject);
+            Object.Destroy(FloorsObject);
 
             Tiles = new Tile[_rows, _columns];
             Positions = new Vector2[_rows, _columns];
@@ -150,5 +158,13 @@ public class Board
             }
         }
         return list;
+    }
+
+    /// <summary>
+    /// Deletes all gameobjects and related baggage
+    /// </summary>
+    public void DeleteGameObjects()
+    {
+        GameObject.Destroy(boardObject);
     }
 }

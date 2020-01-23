@@ -19,6 +19,7 @@ public class CameraManager : MonoBehaviour
             Instantiate(gameManager);
             GameManager.instance.CameraManager = this;
         }
+        //DontDestroyOnLoad(gameObject);
     }
 
     void Update()

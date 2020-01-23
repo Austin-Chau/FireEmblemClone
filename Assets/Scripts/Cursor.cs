@@ -13,6 +13,10 @@ public class Cursor : MonoBehaviour
 
     public Tile CurrentTile { get; private set; }
 
+    private void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
+    }
     private void Start()
     {
         inverseMoveTime = 1 / moveTime;
