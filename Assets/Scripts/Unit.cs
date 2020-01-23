@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -372,18 +372,20 @@ public class Unit : MonoBehaviour, IDamageableObject
         switch (_action)
         {
             case ActionNames.Move:
-                moveTree = Pathfinding.GenerateTileTree(currentTile, moveRadius, movementType, false, false, Team); //add checks for if this changes between drawing squares and metamove
+                moveTree = GetMoveTree(); //add checks for if this changes between drawing squares and metamove
                 foreach (KeyValuePair<Tile, int> pair in moveTree)
                 {
+                    Tile tile = pair.Key;
                     //Checks if there's a unit already on the tile before adding to the move tree.
-                    if (!pair.Key.Occupied)
+                    if (!tile.Occupied || tile.CurrentUnit.Team == Team)
                     {
-                        Vector3 position = pair.Key.Position;
+                        Vector3 position = tile.Position;
                         ActionSpace moveSpaceScript = Instantiate(MoveSpace, position, Quaternion.identity).GetComponent<ActionSpace>();
                         moveSpaceScript.parentUnit = this;
-                        moveSpaceScript.currentTile = pair.Key;
+                        moveSpaceScript.currentTile = tile;
                         moveSpaceScript.command = CommandNames.Move;
-                        spaces[pair.Key] = moveSpaceScript;
+                        moveSpaceScript.Invalid = tile.Occupied;
+                        spaces[tile] = moveSpaceScript;
                     }
                 }
                 break;

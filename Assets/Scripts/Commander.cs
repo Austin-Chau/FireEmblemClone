@@ -123,7 +123,7 @@ public class Commander
     /// <param name="_context"></param>
     public void ParseTile(Unit _unit, CursorContext _context)
     {
-        if (!_unit.actionSpaces.ContainsKey(_context.currentTile) || _unit.actionSpaces[_context.currentTile] == null)
+        if (!_unit.actionSpaces.ContainsKey(_context.currentTile) || _unit.actionSpaces[_context.currentTile] == null || _unit.actionSpaces[_context.currentTile].Invalid)
         {
             SwitchSelectedUnit(_context);
         }
