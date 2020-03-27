@@ -16,9 +16,10 @@ public abstract class ActionManager
     /// Given a unit and a list of actions that unit can take, does whatever behavior we wish.
     /// AI will pick one, player will talk with the GUI to pick one.
     /// </summary>
-    public abstract void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, ParseCommandCallbackContainer _callbackContainer);
+    public abstract void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, Action<ParseCommandPayload> _parseCommand, Action _endGameState);
 }
 
+/*
 public class BasicEnemy : ActionManager
 { //This AI is rudimentary, it just moves to a random tile in the tree
     public BasicEnemy()
@@ -31,7 +32,7 @@ public class BasicEnemy : ActionManager
         return;
     }
 
-}
+}*/
 
 public class PlayerBehavior : ActionManager
 { //The behaviors for what a player's unit should do when the controller interacts with it
@@ -40,43 +41,48 @@ public class PlayerBehavior : ActionManager
         autoTurn = false;
     }
 
-    public override void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, ParseCommandCallbackContainer _callbackContainer)
+    public override void DecideOnACommand(Unit _unit, Tile _targetTile, List<ActionNames> _actions, Action<ParseCommandPayload> _parseCommand, Action _endGameState)
     {
-        /*
-         * Goal: send this list of actions to the GUI.
-         */
-        Action[] callbacks;
-        Action endTurnCallback;
-        Tuple<string, Action> tuple;
+        Action[] callbacks = new Action[] { }; //callbacks for after the gamemanager parses the command
+        Action selectedAction; // The action that is performed when the menu option is selected
+        Tuple<string, Action> tuple; //tuple to store the menu entry
 
+        //Now for every possible action that was passed
         List<Tuple<string, Action>> listOfEntries = new List<Tuple<string, Action>>();
         foreach (ActionNames action in _actions)
         {
-            Debug.Log(action);
-            callbacks = new Action[] { _callbackContainer.releaseInputCallback };
-            endTurnCallback =
+            //actions = new Action[] { _endGameState };
+            selectedAction =
                 () => {
-                    ParseCommandPayload tempPayload = new ParseCommandPayload(ActionsToCommands[action], _unit, _targetTile, callbacks, new object[0]);
-                    _callbackContainer.PerformCallback(tempPayload);
+                    _endGameState();
+                    ParseCommandPayload tempPayload = new ParseCommandPayload(ActionsToCommands[action], _unit, _targetTile, callbacks);
+                    _parseCommand(tempPayload);
                 };
-            tuple = new Tuple<string, Action>(ActionsToCommandMenuString[action], endTurnCallback);
+            tuple = new Tuple<string, Action>(ActionsToCommandMenuString[action], selectedAction);
             listOfEntries.Add(tuple);
         }
 
-        callbacks = new Action[] { _callbackContainer.releaseInputCallback };
-        endTurnCallback =
+        //Now for the wait option, which appears no matter what
+        //actions = new Action[] { _endGameState };
+        selectedAction =
             () => {
-                ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.EndTurn, _unit, _targetTile, callbacks, new object[0]);
-                _callbackContainer.PerformCallback(tempPayload);
+                _endGameState();
+                ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.EndTurn, _unit, _targetTile, callbacks);
+                _parseCommand(tempPayload);
             };
-        tuple = new Tuple<string, Action>("Wait", endTurnCallback);
+        tuple = new Tuple<string, Action>("Wait", selectedAction);
+
         listOfEntries.Add(tuple);
 
+        //Now for what happens when the player backs out of the menu
+        //actions = new Action[] { _endGameState };
         Action reverseCallback =
             () => {
-                ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.Revert, _unit, _targetTile, callbacks, new object[0]);
-                _callbackContainer.PerformCallback(tempPayload);
+                _endGameState();
+                ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.Revert, _unit, _targetTile, callbacks);
+                _parseCommand(tempPayload);
             };
+
         GameManager.instance.GUIManager.StartCommandMenu(listOfEntries, reverseCallback);
         return;
     }

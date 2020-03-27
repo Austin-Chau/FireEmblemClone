@@ -11,8 +11,29 @@ public class Commander
     public List<Unit> Units = new List<Unit>();
     public ActionManager ActionManager { get; private set; }
     public bool MyTurn { get; private set; }
+    public Unit SelectedUnit;
 
-    private Unit SelectedUnit
+
+    public Commander(Team _team, ActionManager _actionManager)
+    {
+        Team = _team;
+        ActionManager = _actionManager;
+    }
+
+    public void StartTurn()
+    {
+        MyTurn = true;
+        SelectedUnit = null;
+    }
+
+    public void EndTurn()
+    {
+        MyTurn = false;
+        SelectedUnit = null;
+    }
+
+    /***
+    public Unit SelectedUnit
     {
         get
         {
@@ -25,6 +46,8 @@ public class Commander
         }
     }
     private Unit selectedUnit;
+
+    public Unit MovingUnit;
 
     /// <summary>
     /// Sets the team and behavior of this controller. 
@@ -50,13 +73,13 @@ public class Commander
         {
             case ControlsEnum.Confirm:
                 Debug.Log("Confirm has been pressed:");
-                /*
-                Debug.Log(SelectedUnit != null);
-                Debug.Log(SelectedUnit != null && !SelectedUnit.IsPerformingAction());
-                Debug.Log(SelectedUnit != null && SelectedUnit.commander == this);
-                Debug.Log(SelectedUnit != null && SelectedUnit.actionSpaces.ContainsKey(_cursorContext.currentTile));
-                */
-                if (SelectedUnit != null && //we have a SelectedUnit
+
+                if (_cursorContext.gameState == GameStates.UnitPathCreation)
+                {
+                    MovingUnit.ExecuteMovementPath();
+                    GameManager.instance.EndGameState();
+                }
+                else if (SelectedUnit != null && //we have a SelectedUnit
                     !SelectedUnit.IsPerformingAction() && //it is not in the middle of an action
                     SelectedUnit.Commander == this && //it is our unit
                     SelectedUnit.actionSpaces.ContainsKey(_cursorContext.currentTile)) //the tile we are selecting is an actionspace
@@ -78,7 +101,13 @@ public class Commander
                     SelectedUnit = null;
                 }
                 break;
-
+            case ControlsEnum.Rotate:
+                Debug.Log("Rotate has been pressed");
+                if (_cursorContext.gameState == GameStates.UnitPathCreation && MovingUnit != null)
+                {
+                    //MovingUnit.StepPathCreationRotation(1);
+                }
+                break;
             default:
                 break;
         }
@@ -166,7 +195,9 @@ public class Commander
                 return;
             case CommandNames.InitializeMove:
                 actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); };
-                _payload.actingUnit.GenerateActSpaces(ActionNames.Move);
+                Action<Unit> unitActionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); CheckIfUnitFinishedTurn(_unit); };
+                //_payload.actingUnit.GenerateActSpaces(ActionNames.Move);
+                _payload.actingUnit.InitializePathCreation(actionFinishedCallback);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.GenerateMoveSpaces:
@@ -225,9 +256,10 @@ public class Commander
 
     public void DeselectUnit()
     {
+        Debug.Log("unit deselected");
         SelectedUnit = null;
     }
 
     #endregion
-
+    ***/
 };

@@ -12,7 +12,8 @@ public enum ControlsEnum
     Null,
     Confirm,
     OpenMainMenu,
-    Reverse
+    Reverse,
+    Rotate
 }
 
 public enum CommandNames
@@ -38,11 +39,11 @@ public enum Team
 
 public enum AdjacentDirection
 {
+    None,
     Up,
     Right,
     Down,
-    Left,
-    None
+    Left
 }
 
 public enum MenuBufferingType
@@ -63,4 +64,18 @@ public enum WinConditions
 {
     None,
     Rout
+}
+
+public enum GameStates
+{
+    None,
+    UnitPathCreation,
+    GUIMenuing
+}
+
+public enum PathCreationStepTypes
+{
+    None,
+    Rotation,
+    Translation
 }

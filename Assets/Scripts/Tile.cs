@@ -31,12 +31,14 @@ public class Tile
         MovementWeights = new Dictionary<MovementTypes, int>();
         if (_type == TileType.Ground)
         {
+            GameManager.instance.BoardRockData[GridPosition.x, GridPosition.y] = false;
             MovementWeights[MovementTypes.None] = 1;
             MovementWeights[MovementTypes.Ground] = 1;
             MovementWeights[MovementTypes.Flying] = 1;
         }
         else
         {
+            GameManager.instance.BoardRockData[GridPosition.x, GridPosition.y] = true;
             MovementWeights[MovementTypes.None] = 1;
             MovementWeights[MovementTypes.Ground] = 100;
             MovementWeights[MovementTypes.Flying] = 1;

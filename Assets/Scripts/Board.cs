@@ -90,7 +90,17 @@ public class Board
             for (int j = 0; j < columns; j++)
             {
                 Positions[i, j] = new Vector2(i, j);
-                tileType = Random.value > .2f ? TileType.Ground : TileType.Wall;
+
+                if (i < 3 || j < 3)
+                {
+                    tileType = TileType.Ground;
+                }
+                else
+                {
+                    tileType = Random.value > .2f ? TileType.Ground : TileType.Wall;
+                }
+
+
                 Tiles[i, j] = new Tile(Positions[i, j],
                     tileType,
                     tileType == TileType.Ground ? FloorsParent : WallsParent);

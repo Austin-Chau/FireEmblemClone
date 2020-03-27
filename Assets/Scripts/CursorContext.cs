@@ -8,8 +8,9 @@ public struct CursorContext
     public ControlsEnum inputButton { get; private set; }
     public Action releaseInputCallback { get; private set; }
     public Action lockInputCallback { get; private set; }
+    public GameStates gameState { get; private set; }
 
-    public CursorContext(Tile _selectedTile, Commander _currentCommander, Unit _targetUnit, ControlsEnum _inputButton, Action _releaseInputCallback, Action _lockInputCallback)
+    public CursorContext(Tile _selectedTile, Commander _currentCommander, Unit _targetUnit, ControlsEnum _inputButton, Action _releaseInputCallback, Action _lockInputCallback, GameStates _gameState)
     {
         currentTile = _selectedTile;
         cursorCommander = _currentCommander;
@@ -17,5 +18,6 @@ public struct CursorContext
         inputButton = _inputButton;
         releaseInputCallback = _releaseInputCallback;
         lockInputCallback = _lockInputCallback;
+        gameState = _gameState;
     }
 }

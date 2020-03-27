@@ -47,7 +47,6 @@ public class Cursor : MonoBehaviour
             yield return null;
         }
         CurrentTile = destinationTile;
-        GameManager.instance.GUIManager.UpdateHoveredUnit(CurrentTile.CurrentUnit);
         transform.position = CurrentTile.Position; //snap the position just in case the unit is slightly off
         Moving = false;
     }

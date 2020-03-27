@@ -5,8 +5,8 @@ using UnityEngine;
 public class BoardManager : MonoBehaviour
 {
     //how wide and tall the level is (does not include the outer walls on the outside)
-    public int columns = 12;
-    public int rows = 12;
+    public static int columns = 12;
+    public static int rows = 12;
 
     Board board;
 

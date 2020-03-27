@@ -11,6 +11,7 @@ public class GUIManager : MonoBehaviour
     public GameObject bodyTextPrefab;
     public GameObject menuEntryLabelPrefab;
     public GameObject turnTextObject;
+    public GameObject tileTextObject;
     public GameObject actionTextObject;
     private GameObject commandMenuObject;
     private GameObject turnBannerObject;
@@ -33,6 +34,7 @@ public class GUIManager : MonoBehaviour
 
     private Text actionText;
     private Text turnText;
+    private Text tileText;
     private const float turnBannerLength = 1.5f;
     public Unit SelectedUnit
     {
@@ -78,6 +80,10 @@ public class GUIManager : MonoBehaviour
         turnText = turnTextObject.GetComponent<Text>();
         turnText.alignment = TextAnchor.MiddleLeft;
 
+        tileTextObject = transform.Find("TileText").gameObject;
+        tileText = tileTextObject.GetComponent<Text>();
+        tileText.alignment = TextAnchor.MiddleLeft;
+
         commandMenuObject = transform.Find("CommandMenu").gameObject;
         turnBannerObject = transform.Find("TurnBanner").gameObject;
         turnBannerObject.SetActive(false);
@@ -92,6 +98,20 @@ public class GUIManager : MonoBehaviour
         GUIManagerObject = gameObject;
         DontDestroyOnLoad(gameObject);
     }
+
+    public void UpdateSelectedTile(Tile _tile)
+    {
+        /*
+        if (_tile.CurrentUnit != null)
+        {
+            UpdateSelectedUnit(_tile.CurrentUnit);
+        }*/
+
+        tileText.text = "Current tile is " + _tile.GridPosition + " with type " + _tile.type;
+    }
+
+
+
     public void UpdateSelectedUnit(Unit _unit)
     {
         if (_unit == null)
@@ -202,7 +222,7 @@ public class GUIManager : MonoBehaviour
     {
         currentMenuContainer.CurrentMenu.SetSelected(false);
         currentMenuContainer.SetActive(false);
-        currentMenuContainer.ReverseCallback();
+        Action reverseCallback = currentMenuContainer.ReverseCallback;
 
         if (suspendedMenuContainers.Count > 0)
         {
@@ -212,7 +232,10 @@ public class GUIManager : MonoBehaviour
         else
         {
             currentMenuContainer = null;
+            GameManager.instance.ChangeGameState(GameStates.None);
         }
+
+        reverseCallback();
     }
 
     /// <summary>
@@ -255,6 +278,7 @@ public class GUIManager : MonoBehaviour
                 currentMenuContainer = null;
             }
         }
+
     }
 
     public void StartMainMenu()
@@ -264,6 +288,8 @@ public class GUIManager : MonoBehaviour
 
     public void StartCommandMenu(List<Tuple<string, Action>> _listOfEntries, Action _reverseCallback)
     {
+        GameManager.instance.ChangeGameState(GameStates.GUIMenuing);
+
         foreach (Transform child in commandMenuObject.transform)
         {
             Destroy(child.gameObject);
