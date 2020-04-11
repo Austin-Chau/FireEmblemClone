@@ -25,13 +25,20 @@ public class Cursor : MonoBehaviour
         transform.position = CurrentTile.Position; //snap to that tile
     }
 
-    public void Move(AdjacentDirection _direction)
+    /// <summary>
+    /// The cursor attempts a movement in the given direction. Returns true if successful, false otherwise.
+    /// </summary>
+    /// <param name="_direction"></param>
+    /// <returns></returns>
+    public bool AttemptMove(AdjacentDirection _direction)
     {
         Tile destinationTile = CurrentTile.GetAdjacentTile(_direction);
         if (destinationTile != null && destinationTile != CurrentTile)
         {
             StartCoroutine(SmoothMovement(destinationTile));
+            return true;
         }
+        return false;
     }
 
     private IEnumerator SmoothMovement(Tile destinationTile)

@@ -70,6 +70,7 @@ public enum GameStates
 {
     None,
     UnitPathCreation,
+    UnitPathConclusion,
     GUIMenuing
 }
 

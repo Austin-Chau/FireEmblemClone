@@ -9,14 +9,24 @@ public class GUIManager : MonoBehaviour
     public GameObject GUIManagerObject;
     public GameObject textPrefab;
     public GameObject bodyTextPrefab;
-    public GameObject menuEntryLabelPrefab;
+    public GameObject menuElementLabelPrefab;
+
+    //References to gameobjects that have already been placed (their text components will be grabbed)
     public GameObject turnTextObject;
     public GameObject tileTextObject;
     public GameObject actionTextObject;
-    private GameObject commandMenuObject;
-    private GameObject turnBannerObject;
-    private GameObject mainMenuObject;
+    public GameObject stateTextObject;
+    public GameObject turnBannerTextObject;
+
+    //Other references to gameobjects
+    public GameObject commandMenuObject;
+    public GameObject mainMenuObject;
     private GameObject unitInspectorObject;
+
+    [SerializeField]
+    public GameObject commandMenuElementPrefab;
+    [SerializeField]
+    public MainMenuElement[] mainMenuElements;
 
     private MenuContainer mainMenuContainer;
 
@@ -35,6 +45,10 @@ public class GUIManager : MonoBehaviour
     private Text actionText;
     private Text turnText;
     private Text tileText;
+    private Text stateText;
+    private Text turnBannerText;
+
+
     private const float turnBannerLength = 1.5f;
     public Unit SelectedUnit
     {
@@ -64,6 +78,13 @@ public class GUIManager : MonoBehaviour
         {Team.Player2, "Player Two" },
         {Team.Enemy, "Enemy" }
     };
+    private readonly Dictionary<GameStates, string> gameStateNames = new Dictionary<GameStates, string>
+    {
+        {GameStates.None, "None" },
+        {GameStates.GUIMenuing, "GUIMenuing" },
+        {GameStates.UnitPathConclusion, "UnitPathConclusion" },
+        {GameStates.UnitPathCreation, "UnitPathCreation" }
+    };
     private readonly Dictionary<ActionNames, string> actionNames = new Dictionary<ActionNames, string>
     {
         {ActionNames.Move, "Move" },
@@ -72,21 +93,14 @@ public class GUIManager : MonoBehaviour
 
     private void Awake()
     {
-        actionTextObject = transform.Find("ActionText").gameObject;
         actionText = actionTextObject.GetComponent<Text>();
-        actionText.alignment = TextAnchor.MiddleLeft;
-
-        turnTextObject = transform.Find("TurnText").gameObject;
         turnText = turnTextObject.GetComponent<Text>();
-        turnText.alignment = TextAnchor.MiddleLeft;
-
-        tileTextObject = transform.Find("TileText").gameObject;
         tileText = tileTextObject.GetComponent<Text>();
-        tileText.alignment = TextAnchor.MiddleLeft;
+        stateText = stateTextObject.GetComponent<Text>();
+        turnBannerText = turnBannerTextObject.GetComponent<Text>();
 
         commandMenuObject = transform.Find("CommandMenu").gameObject;
-        turnBannerObject = transform.Find("TurnBanner").gameObject;
-        turnBannerObject.SetActive(false);
+
         mainMenuObject = transform.Find("MainMenu").gameObject;
 
         unitInspectorObject = transform.Find("UnitInspector").gameObject;
@@ -154,6 +168,11 @@ public class GUIManager : MonoBehaviour
         }
     }
 
+    public void UpdateGameState(GameStates _state)
+    {
+        stateText.text = "GameState is: "+gameStateNames[_state];
+    }
+
     /// <summary>
     /// Controls the movement from one menuelement to the next.
     /// </summary>
@@ -169,7 +188,7 @@ public class GUIManager : MonoBehaviour
         if (!StepScrollingBuffer(currentMenuContainer.CurrentMenu.GetBufferScrolling(_direction), _direction))
             return;
 
-        MenuElement tempMenu = currentMenuContainer.CurrentMenu.GetAdjacentMenuElement(_direction);
+        IMenuElement tempMenu = currentMenuContainer.CurrentMenu.GetAdjacentMenuElement(_direction);
         if (tempMenu != null && tempMenu != currentMenuContainer.CurrentMenu)
         {
             currentMenuContainer.CurrentMenu.SetSelected(false);
@@ -262,7 +281,7 @@ public class GUIManager : MonoBehaviour
 
     public void ActivateCursor()
     {
-        if (currentMenuContainer.CurrentMenu.ConfirmEntry())
+        if (currentMenuContainer.CurrentMenu.ConfirmElement())
         {
             currentMenuContainer.SetActive(false);
 
@@ -286,7 +305,7 @@ public class GUIManager : MonoBehaviour
         ForwardMenu(mainMenuContainer);
     }
 
-    public void StartCommandMenu(List<Tuple<string, Action>> _listOfEntries, Action _reverseCallback)
+    public void StartCommandMenu(List<Tuple<string, Action>> _listOfElements, Action _reverseCallback)
     {
         GameManager.instance.ChangeGameState(GameStates.GUIMenuing);
 
@@ -295,16 +314,20 @@ public class GUIManager : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        MenuContainer commandMenuGroup = new MenuContainer(_reverseCallback);
+        MenuContainer commandMenuContainer = new MenuContainer(_reverseCallback);
 
-        MenuElement[] tempArray = new MenuElement[_listOfEntries.Count];
+        IMenuElement[] tempArray = new IMenuElement[_listOfElements.Count];
         int i = 0;
 
-        foreach (Tuple<string, Action> entry in _listOfEntries)
+        foreach (Tuple<string, Action> element in _listOfElements)
         {
-            GameObject tempEntry = Instantiate(menuEntryLabelPrefab, commandMenuObject.transform, false);
-            bool tempFunc() { entry.Item2(); return true; }
-            MenuElement tempMenu = new CommandMenuElement(tempEntry, entry.Item1, tempFunc);
+            //GameObject tempElement = Instantiate(menuElementLabelPrefab, commandMenuObject.transform, false);
+            bool tempCallback() { element.Item2(); return true; }
+
+            //MenuElement tempMenu = new CommandMenuElement(tempElement, element.Item1, tempFunc);
+            CommandMenuElement tempMenu = Instantiate(commandMenuElementPrefab, commandMenuObject.transform).GetComponent<CommandMenuElement>();
+            tempMenu.InitiateProperties(element.Item1,tempCallback);
+
             tempMenu.SetActive(true);
             tempArray[i] = tempMenu;
 
@@ -313,56 +336,41 @@ public class GUIManager : MonoBehaviour
                 tempArray[i - 1].SetAdjacentMenu(AdjacentDirection.Down, tempArray[i]);
                 tempArray[i].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i - 1]);
             }
-            if (i == _listOfEntries.Count - 1)
+            if (i == _listOfElements.Count - 1)
             {
                 tempArray[i].SetAdjacentMenu(AdjacentDirection.Down, tempArray[0]);
                 tempArray[0].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i]);
             }
 
-            commandMenuGroup.Add(tempMenu);
+            commandMenuContainer.Add(tempMenu);
             i++;
         }
-        currentMenuContainer = commandMenuGroup;
-        currentMenuContainer.CurrentMenu = commandMenuGroup.GetInitialMenu();
+        ForwardMenu(commandMenuContainer);
+
+        /*
+        currentMenuContainer = commandMenuContainer;
+        currentMenuContainer.CurrentMenu = commandMenuContainer.GetInitialMenu();
         commandMenuObject.SetActive(true);
         currentMenuContainer.CurrentMenu.SetSelected(true);
+        */
     }
 
     private readonly string[] mainMenuLabels = { "Overview", "Controls" };
 
+    /// <summary>
+    /// Creates a menucontainer that contains the mainmenu elements
+    /// </summary>
+    /// <returns></returns>
     public MenuContainer GenerateMainMenu()
     {
-        MenuContainer tempGroup = new MenuContainer(() => { });
-        GameObject leftColumn = mainMenuObject.transform.Find("LeftColumn").gameObject;
-        GameObject rightColumn = mainMenuObject.transform.Find("RightColumn").gameObject;
-        MenuElement[] tempArray = new MenuElement[mainMenuLabels.Length];
-        int i = 0;
+        MenuContainer tempContainer = new MenuContainer(() => { });
 
-        foreach (string _string in mainMenuLabels)
+        for(int i = 0; i < mainMenuElements.Length; i++)
         {
-            GameObject tempEntryObject = Instantiate(menuEntryLabelPrefab, leftColumn.transform, false);
-            GameObject tempEntryStagingAreaObject = Instantiate(bodyTextPrefab, rightColumn.transform, false);
-
-            MenuElement tempMenu = new MainMenuElement(tempEntryObject, _string, tempEntryStagingAreaObject);
-            tempArray[i] = tempMenu;
-
-            if (i > 0)
-            {
-                tempArray[i - 1].SetAdjacentMenu(AdjacentDirection.Down, tempArray[i]);
-                tempArray[i].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i - 1]);
-            }
-            if (i == mainMenuLabels.Length - 1)
-            {
-                tempArray[i].SetAdjacentMenu(AdjacentDirection.Down, tempArray[0]);
-                tempArray[0].SetAdjacentMenu(AdjacentDirection.Up, tempArray[i]);
-            }
-
-            tempGroup.Add(tempMenu);
-
-            i++;
+            tempContainer.Add(mainMenuElements[i]);
         }
-        tempGroup.SetActive(false);
-        return tempGroup;
+
+        return tempContainer;
     }
 
     public void TurnBanner(Commander _commander, Action _callback)
@@ -377,10 +385,10 @@ public class GUIManager : MonoBehaviour
 
     private IEnumerator<WaitForSeconds> TurnBannerCoroutine(string _bannerText, Action _callback)
     {
-        turnBannerObject.SetActive(true);
-        turnBannerObject.GetComponent<Text>().text = _bannerText;
+        turnBannerText.gameObject.SetActive(true);
+        turnBannerText.text = _bannerText;
         yield return new WaitForSeconds(turnBannerLength);
-        turnBannerObject.SetActive(false);
+        turnBannerText.gameObject.SetActive(false);
         _callback();
     }
 }

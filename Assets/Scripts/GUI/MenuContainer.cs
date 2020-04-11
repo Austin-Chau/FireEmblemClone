@@ -3,28 +3,36 @@ using System.Collections.Generic;
 
 public class MenuContainer
 {
-    private List<MenuElement> menus = new List<MenuElement>();
+    private List<IMenuElement> menus = new List<IMenuElement>();
     public Action ReverseCallback { get; private set; }
-    public MenuElement CurrentMenu;
+    public IMenuElement CurrentMenu;
 
     public MenuContainer(Action _reverseCallback)
     {
         ReverseCallback = _reverseCallback;
     }
+    public MenuContainer(Action _reverseCallback, List<IMenuElement> _menus)
+    {
+        ReverseCallback = _reverseCallback;
+        foreach(IMenuElement menu in _menus)
+        {
+            menus.Add(menu);
+        }
+    }
 
-    public void Add(MenuElement _menu)
+    public void Add(IMenuElement _menu)
     {
         menus.Add(_menu);
     }
 
-    public MenuElement GetInitialMenu()
+    public IMenuElement GetInitialMenu()
     {
         return menus[0];
     }
 
     public void SetActive(bool _active)
     {
-        foreach (MenuElement menu in menus)
+        foreach (IMenuElement menu in menus)
         {
             menu.SetActive(_active);
         }
@@ -32,7 +40,7 @@ public class MenuContainer
 
     public void SetForeground(bool _foreground)
     {
-        foreach (MenuElement menu in menus)
+        foreach (IMenuElement menu in menus)
         {
             menu.SetForeground(_foreground);
         }

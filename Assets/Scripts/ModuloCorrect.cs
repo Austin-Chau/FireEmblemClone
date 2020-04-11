@@ -1,7 +1,8 @@
-﻿namespace ModuloCorrect
+﻿namespace CustomMath
 {
     public class CustomMath
     {
-        public static int mod(int k, int n) { return ((k %= n) < 0) ? k + n : k; }
+        //Returns k mod n, always positive
+        public static int positiveMod(int k, int n) { return ((k %= n) < 0) ? k + n : k; }
     }
 }

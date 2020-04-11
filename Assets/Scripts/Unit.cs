@@ -538,8 +538,6 @@ public class Unit : MonoBehaviour, IDamageableObject
         Action unitCallback = () => { Debug.Log("Setting phaseFlag to true"); actionsPerformedFlags[ActionNames.Move] = true; EraseSpaces(); };
         ActionCallbackContainer actionCallbackContainer = new ActionCallbackContainer(_commanderCallback, unitCallback, this);
 
-        GameManager.instance.StartUnitMovement(this);
-
         movementPath = new List<PathCreationStep>();
         movementCallback = actionCallbackContainer;
 
@@ -547,10 +545,12 @@ public class Unit : MonoBehaviour, IDamageableObject
         movementPath.Add(nullStep);
     }
 
+    /*
     public bool CheckIfStepLegal(AdjacentDirection _direction)
     {
         return true;
     }
+    */
 
     /// <summary>
     /// Stores data on each step in the path as it is created. includes the sprite.
@@ -638,7 +638,7 @@ public class Unit : MonoBehaviour, IDamageableObject
             previousStep.movementType == PathCreationStepTypes.Translation
             && ((int)_direction % 4 == ((int)previousDirection + 2) % 4)) //if the direction we just inputted is opposite of the previous move, then cancel it.
         {
-            Debug.Log("resetting previous move");
+            //Debug.Log("resetting previous move");
             movementPath[movementPath.Count - 1].Clear();
             movementPath.RemoveAt(movementPath.Count - 1);
             return true;
@@ -681,6 +681,8 @@ public class Unit : MonoBehaviour, IDamageableObject
     {
         PathCreationStep previousStep = movementPath[movementPath.Count - 1];
 
+        //Debug.Log(clockwise);
+
         int _deltaRotation = clockwise ? 1 : -1;
 
         if (movementPath.Count == 0)
@@ -693,7 +695,7 @@ public class Unit : MonoBehaviour, IDamageableObject
             previousStep.movementType == PathCreationStepTypes.Rotation
             && _deltaRotation == -1*previousStep.deltaRotation) //if the direction we just inputted is opposite of the previous move, then cancel it.
         {
-            Debug.Log("resetting previous move");
+            //Debug.Log("resetting previous move");
             movementPath[movementPath.Count - 1].Clear();
             movementPath.RemoveAt(movementPath.Count - 1);
             return true;
@@ -703,8 +705,8 @@ public class Unit : MonoBehaviour, IDamageableObject
         Tile _destinationTile = previousStep.finalTile;
 
         //First check if the movement is legal
-        Debug.Log(previousStep.finalRotation);
-        if (_destinationTile == null || tilesContainer.CheckOutOfBounds(_destinationTile.GridPosition, previousStep.finalRotation+_deltaRotation))
+        //Debug.Log(previousStep.finalRotation);
+        if (_destinationTile == null || tilesContainer.CheckIfCannotRotate(_destinationTile.GridPosition, previousStep.finalRotation,_deltaRotation))
         {
             return false;
         }
@@ -730,6 +732,10 @@ public class Unit : MonoBehaviour, IDamageableObject
         return false;
     }
 
+    /// <summary>
+    /// Performs the movement path that has been created
+    /// </summary>
+    /// <param name="_actionCallbackContainer"></param>
     public void ExecuteMovementPath(ActionCallbackContainer _actionCallbackContainer)
     {
         Debug.Log("Path Length" + movementPath.Count);
@@ -742,6 +748,21 @@ public class Unit : MonoBehaviour, IDamageableObject
             _actionCallbackContainer.PerformCallback();
         }
     }
+
+    /// <summary>
+    /// Cancels the movement path and gets things back to how it was before (for the unit).
+    /// </summary>
+    public void AbortMovementPath()
+    {
+        //GameManager.instance.StartUnitMovement(this);
+
+        foreach(PathCreationStep step in movementPath)
+        {
+            step.Clear();
+        }
+        movementPath = null;
+    }
+
 
     /// <summary>
     /// Gets the path of the unit using the starting and destination tile, then collapses it down into just the vertices.

@@ -45,34 +45,34 @@ public class PlayerBehavior : ActionManager
     {
         Action[] callbacks = new Action[] { }; //callbacks for after the gamemanager parses the command
         Action selectedAction; // The action that is performed when the menu option is selected
-        Tuple<string, Action> tuple; //tuple to store the menu entry
+        Tuple<string, Action> tuple; //tuple to store the menu element
 
         //Now for every possible action that was passed
-        List<Tuple<string, Action>> listOfEntries = new List<Tuple<string, Action>>();
+        List<Tuple<string, Action>> listOfElements = new List<Tuple<string, Action>>();
         foreach (ActionNames action in _actions)
         {
             //actions = new Action[] { _endGameState };
             selectedAction =
                 () => {
-                    _endGameState();
+                    //_endGameState();
                     ParseCommandPayload tempPayload = new ParseCommandPayload(ActionsToCommands[action], _unit, _targetTile, callbacks);
                     _parseCommand(tempPayload);
                 };
             tuple = new Tuple<string, Action>(ActionsToCommandMenuString[action], selectedAction);
-            listOfEntries.Add(tuple);
+            listOfElements.Add(tuple);
         }
 
         //Now for the wait option, which appears no matter what
         //actions = new Action[] { _endGameState };
         selectedAction =
             () => {
-                _endGameState();
+                //_endGameState();
                 ParseCommandPayload tempPayload = new ParseCommandPayload(CommandNames.EndTurn, _unit, _targetTile, callbacks);
                 _parseCommand(tempPayload);
             };
         tuple = new Tuple<string, Action>("Wait", selectedAction);
 
-        listOfEntries.Add(tuple);
+        listOfElements.Add(tuple);
 
         //Now for what happens when the player backs out of the menu
         //actions = new Action[] { _endGameState };
@@ -83,7 +83,7 @@ public class PlayerBehavior : ActionManager
                 _parseCommand(tempPayload);
             };
 
-        GameManager.instance.GUIManager.StartCommandMenu(listOfEntries, reverseCallback);
+        GameManager.instance.GUIManager.StartCommandMenu(listOfElements, reverseCallback);
         return;
     }
 

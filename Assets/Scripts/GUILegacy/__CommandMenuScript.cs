@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CommandMenuScript : MonoBehaviour
 {
-    [SerializeField] private List<Tuple<GameObject, Action>> listOfEntries;
+    [SerializeField] private List<Tuple<GameObject, Action>> listOfElements;
     private Tuple<int, int> suspendedCursorPosition = new Tuple<int,int>(0,0);
     private Action reverseCallback;
 
@@ -27,7 +27,7 @@ public class CommandMenuScript : MonoBehaviour
 
     public bool IsNotReady()
     {
-        return listOfEntries.Count == 0 || !isSetup;
+        return listOfElements.Count == 0 || !isSetup;
     }
 
     public MenuBufferingType BufferScrolling(AdjacentDirection _direction)
@@ -65,26 +65,26 @@ public class CommandMenuScript : MonoBehaviour
 
         if (y < 0)
         {
-            y = listOfEntries.Count - 1;
+            y = listOfElements.Count - 1;
         }
-        else if (y >= listOfEntries.Count)
+        else if (y >= listOfElements.Count)
         {
             y = 0;
         }
 
         if (y != _cursorPosition.Item2)
         {
-            SetEntryActive(_cursorPosition, false);
+            SetElementActive(_cursorPosition, false);
             Tuple<int, int> newTuple = new Tuple<int, int>(0, y);
-            SetEntryActive(newTuple, true);
+            SetElementActive(newTuple, true);
             return newTuple;
         }
         return _cursorPosition;
     }
 
-    public void SetEntryActive(Tuple<int,int> _position, bool _isActive)
+    public void SetElementActive(Tuple<int,int> _position, bool _isActive)
     {
-        listOfEntries[_position.Item2].Item1.GetComponent<CommandMenuEntryScript>().Active = _isActive;
+        listOfElements[_position.Item2].Item1.GetComponent<CommandMenuElementScript>().Active = _isActive;
     }
 
     public void SetMenuActive(bool _active)
@@ -93,28 +93,28 @@ public class CommandMenuScript : MonoBehaviour
         if (_active)
         {
             isSetup = false;
-            Debug.Log(listOfEntries[0].Item1);
-            listOfEntries[0].Item1.GetComponent<CommandMenuEntryScript>().Active = true;
+            Debug.Log(listOfElements[0].Item1);
+            listOfElements[0].Item1.GetComponent<CommandMenuElementScript>().Active = true;
         }
     }
 
     public void SetMenuForeground(bool _foreground)
     {
-        foreach (Tuple<GameObject,Action> tuple in listOfEntries)
+        foreach (Tuple<GameObject,Action> tuple in listOfElements)
         {
-            tuple.Item1.GetComponent<CommandMenuEntryScript>().Foreground = _foreground;
+            tuple.Item1.GetComponent<CommandMenuElementScript>().Foreground = _foreground;
         }
     }
 
-    public void Initialize(List<Tuple<GameObject, Action>> _listOfEntries, Action _reverseCallback)
+    public void Initialize(List<Tuple<GameObject, Action>> _listOfElements, Action _reverseCallback)
     {
-        listOfEntries = _listOfEntries;
+        listOfElements = _listOfElements;
         reverseCallback = _reverseCallback;
     }
 
-    public bool SelectEntry(Tuple<int,int> _position)
+    public bool SelectElement(Tuple<int,int> _position)
     {
-        listOfEntries[_position.Item2].Item2();
+        listOfElements[_position.Item2].Item2();
         return true;
     }
 }

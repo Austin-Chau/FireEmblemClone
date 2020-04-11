@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class MainMenuEntryScript : MonoBehaviour
+public class MainMenuElementScript : MonoBehaviour
 {
     private string bodyText = "Lorem Ipsum";
     private string labelText = "Null";

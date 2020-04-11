@@ -25,15 +25,16 @@ public static class Pathfinding
         List<Tile> tilesToCheck = new List<Tile>();
         steps.Push(currentTile);
 
-        while (steps.Peek() != InitialTile) {
+        while (steps.Peek() != InitialTile)
+        {
             lowestValue = int.MaxValue;
             lowestTile = null;
 
             tilesToCheck = currentTile.GetAdjacentTiles();
 
-            foreach(Tile tile in tilesToCheck)
+            foreach (Tile tile in tilesToCheck)
             {
-                if(tileDistances.ContainsKey(tile) && tileDistances[tile] < lowestValue)
+                if (tileDistances.ContainsKey(tile) && tileDistances[tile] < lowestValue)
                 {
                     lowestValue = tileDistances[tile];
                     lowestTile = tile;
@@ -42,7 +43,7 @@ public static class Pathfinding
             steps.Push(lowestTile);
             currentTile = lowestTile;
         }
-        
+
         return steps;
     }
     /*
@@ -212,7 +213,7 @@ public static class Pathfinding
     /// Constantly updates _nodesList and _nodesDictionary (which maps tiles to nodes),
     /// which we can perform A* or some other algorithm on.
     /// </summary>
-    public static Dictionary<Tile,TileNode> NewGenerateTileTree(
+    public static Dictionary<Tile, TileNode> NewGenerateTileTree(
         Tile _startingTile,
         int _maxDistance,
         MovementTypes _movementType,
@@ -264,7 +265,7 @@ public static class Pathfinding
     /// </summary>
     private static void NewFloodFill(
         TileNode _currentNode,
-        Dictionary<Tile,TileNode> _nodesDictionary,
+        Dictionary<Tile, TileNode> _nodesDictionary,
         Tile _currentTile,
         List<TileNode> _nodesList,
         UnitTilesContainer _unitTilesContainer,
@@ -276,14 +277,14 @@ public static class Pathfinding
     {
         //Attempt each cardinal direction
         DateTime currentTime = DateTime.Now;
-        Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "----------");
-        Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "Checking tile " + _currentTile.GridPosition);
+        Debug.Log("" + currentTime.Ticks % 10000000 + " " + "----------");
+        Debug.Log("" + currentTime.Ticks % 10000000 + " " + "Checking tile " + _currentTile.GridPosition);
         for (int i = 0; i < 4; i++)
         {
-            Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "Excluded direction/i: "+_excludedDirection + " "+i);
+            Debug.Log("" + currentTime.Ticks % 10000000 + " " + "Excluded direction/i: " + _excludedDirection + " " + i);
             if (i == _excludedDirection)
             {
-                Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "skipping " + i);
+                Debug.Log("" + currentTime.Ticks % 10000000 + " " + "skipping " + i);
                 continue;
             }
             //the index in adjacentDirections that we should ignore in the next floodfill (if we go right, ignore left etc)
@@ -308,9 +309,9 @@ public static class Pathfinding
                 //Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "no rotation failed");
                 deltaRotation = 1;
                 if (_unitTilesContainer.CheckIfCannotRotate(_currentTile.GridPosition, _currentRotation, deltaRotation)
-                    || _unitTilesContainer.CheckOutOfBounds(adjacentTile.GridPosition, _currentRotation+ deltaRotation))
+                    || _unitTilesContainer.CheckOutOfBounds(adjacentTile.GridPosition, _currentRotation + deltaRotation))
                 {
-                    Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "failed to go 90");
+                    Debug.Log("" + currentTime.Ticks % 10000000 + " " + "failed to go 90");
                     //go -90 degrees
                     //Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "deltaRotation 1 failed");
                     deltaRotation = -1;
@@ -318,7 +319,7 @@ public static class Pathfinding
                         || _unitTilesContainer.CheckOutOfBounds(adjacentTile.GridPosition, _currentRotation + deltaRotation))
                     {
                         //Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "deltaRotation -1 failed");
-                        Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "failed to go -90");
+                        Debug.Log("" + currentTime.Ticks % 10000000 + " " + "failed to go -90");
                         //neither rotation worked, skip to the next direction
                         continue;
                     }
@@ -328,15 +329,15 @@ public static class Pathfinding
             Debug.Log("" + currentTime.Ticks % 10000000 + " " + "deltaRotation: " + deltaRotation);
 
             newRotation = _currentRotation + deltaRotation;
-            newRotation = ModuloCorrect.CustomMath.mod(newRotation, 4);
+            newRotation = CustomMath.CustomMath.positiveMod(newRotation, 4);
 
             //now grab the weight of the new position if we were to move+rotate to it
             movementWeight = _unitTilesContainer.GetWeight(adjacentTile.GridPosition, newRotation, _movementType);
             int newDistance = _currentDistance + movementWeight;
-            
+
             if (newDistance > _maxDistance)
             {
-                Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "Distance has become too far -> return");
+                Debug.Log("" + currentTime.Ticks % 10000000 + " " + "Distance has become too far -> return");
                 continue; //too far, give up
             }
 
@@ -349,7 +350,7 @@ public static class Pathfinding
 
                 if (_currentNode.neighborTransitions.ContainsKey(adjacentNode))
                 {
-                    Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "Tried to add an edge that already existed -> return");
+                    Debug.Log("" + currentTime.Ticks % 10000000 + " " + "Tried to add an edge that already existed -> return");
                     continue; //we are looping back on ourselves, stop
                 }
             }
@@ -431,7 +432,7 @@ public static class Pathfinding
         {
             //Get the "closest" (lowest weight) node to our destination (where the unit currently is)
             lowestNode = getLowestNode(currentNode);
-            Debug.Log( "" + currentTime.Ticks % 10000000 + " " + "Lowest node position: " + lowestNode.position);
+            Debug.Log("" + currentTime.Ticks % 10000000 + " " + "Lowest node position: " + lowestNode.position);
 
             //Now, grab the rotation information. first node refers to the first node the unit will start on
             //during a movement, secondNode the node they are moving to (so the one lower on the stack, if it goes at all on the stack)
@@ -550,7 +551,7 @@ public static class Pathfinding
             if (movementType == PathCreationStepTypes.Translation)
             {
                 arrowSprite = UnityEngine.Object.Instantiate(
-                    Resources.Load<GameObject>(TranslationArrowPrefab),initialTile.Position,Quaternion.identity);
+                    Resources.Load<GameObject>(TranslationArrowPrefab), initialTile.Position, Quaternion.identity);
             }
         }
 

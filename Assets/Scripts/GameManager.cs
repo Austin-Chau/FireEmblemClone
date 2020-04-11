@@ -378,7 +378,7 @@ public class GameManager : MonoBehaviour
                 {
                     if (MovingUnit.StepPathCreationTranslate(direction))
                     {
-                        Cursor.Move(direction);
+                        Cursor.AttemptMove(direction);
                         cursorHasMoved(direction);
                     }
                     return;
@@ -386,7 +386,12 @@ public class GameManager : MonoBehaviour
                 switch (pressedInput)
                 {
                     case ControlsEnum.Confirm:
+                        ChangeGameState(GameStates.UnitPathConclusion);
                         MovingUnit.PerformAction(ActionNames.Move,null,(Unit _unit)=> { EndGameState(); });
+                        break;
+                    case ControlsEnum.Reverse:
+                        MovingUnit.AbortMovementPath();
+                        ChangeGameState(GameStates.None);
                         break;
                     case ControlsEnum.Rotate:
                         bool clockwise;
@@ -410,8 +415,10 @@ public class GameManager : MonoBehaviour
                 //No game state is currently active, so cursor movement should be allowed. after which we then listen to other button presses
                 if (!Cursor.Moving && direction != AdjacentDirection.None)
                 {
-                    Cursor.Move(direction);
-                    cursorHasMoved(direction);
+                    if (Cursor.AttemptMove(direction))
+                    {
+                        cursorHasMoved(direction);
+                    }
                     return;
                 }
                 switch (pressedInput)
@@ -452,6 +459,8 @@ public class GameManager : MonoBehaviour
                         GUIManager.StartMainMenu();
                         break;
                 }
+                break;
+            default:
                 break;
         }
 
@@ -522,9 +531,10 @@ public class GameManager : MonoBehaviour
             case CommandNames.InitializeMove:
                 actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); };
                 Action<Unit> unitActionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); CheckIfUnitFinishedTurn(_unit); };
-                //_payload.actingUnit.GenerateActSpaces(ActionNames.Move);
                 _payload.actingUnit.InitializePathCreation(actionFinishedCallback);
-                actionFinishedCallback(_payload.actingUnit);
+                ChangeGameState(GameStates.UnitPathCreation);
+                MovingUnit = _payload.actingUnit;
+                //actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.GenerateMoveSpaces:
                 actionFinishedCallback = (_unit) => { _payload.PerformCallbacks(); };
@@ -543,11 +553,13 @@ public class GameManager : MonoBehaviour
             case CommandNames.EndTurn:
                 actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); CheckIfUnitFinishedTurn(_unit); };
                 _payload.actingUnit.EndActions();
+                ChangeGameState(GameStates.None);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Cancel:
                 actionFinishedCallback = (_unit) => { DeselectUnit(); _payload.PerformCallbacks(); };
                 _payload.actingUnit.EraseSpaces();
+                ChangeGameState(GameStates.None);
                 actionFinishedCallback(_payload.actingUnit);
                 return;
             case CommandNames.Revert:
@@ -641,6 +653,16 @@ public class GameManager : MonoBehaviour
     /// <param name="_gameState"></param>
     public void ChangeGameState(GameStates _gameState)
     {
+        switch (currentGameState)
+        {
+            case GameStates.UnitPathCreation:
+                if (_gameState != GameStates.UnitPathConclusion)
+                {
+                    MovingUnit = null;
+                }
+                break;
+        }
+        GUIManager.UpdateGameState(_gameState);
         currentGameState = _gameState;
     }
     /// <summary>
@@ -655,18 +677,9 @@ public class GameManager : MonoBehaviour
                 MovingUnit = null;
                 break;
         }
+        GUIManager.UpdateGameState(GameStates.None);
         currentGameState = GameStates.None;
 
-    }
-
-    /// <summary>
-    /// Starts a unit on creating a movement path
-    /// </summary>
-    /// <param name="_unit"></param>
-    public void StartUnitMovement(Unit _unit)
-    {
-        ChangeGameState(GameStates.UnitPathCreation);
-        MovingUnit = _unit;
     }
 
     /// <summary>

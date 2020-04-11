@@ -79,6 +79,7 @@ public class UnitTilesContainer
 
     public static Vector2Int RotateVector2Int(Vector2Int _initial, int _rotation)
     {
+        _rotation = CustomMath.CustomMath.positiveMod(_rotation, 4);
         if (_rotation == 0)
         {
             return _initial;
@@ -107,6 +108,22 @@ public class UnitTilesContainer
     }
 
     /// <summary>
+    /// Returns true if the x,y pair is OOB, false otherwise
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    private bool OutOfBoundsHelper(int x, int y)
+    {
+        bool returnValue =
+                (x < 0 || x >= BoardManager.columns) //outside the board
+                || (y < 0 || y >= BoardManager.rows)
+                || GameManager.instance.BoardRockData[x, y] //occupied by a solid tile
+                || GameManager.instance.Board.Tiles[x, y].Occupied; //occupied by another unit
+        return returnValue;
+    }
+
+    /// <summary>
     /// Returns true if the unit is out of bounds at _origin with rotation _rotation.
     /// </summary>
     /// <param name="_origin"></param>
@@ -118,9 +135,7 @@ public class UnitTilesContainer
         foreach( KeyValuePair<Vector2Int,GameObject> pair in tilePositions)
         {
             Vector2Int vector = RotateVector2Int(pair.Key, _rotation);
-            if ((vector.x+_origin.x < 0 || vector.x+_origin.x >= BoardManager.columns)
-                                || (vector.y + _origin.y < 0 || vector.y + _origin.y >= BoardManager.rows)
-                                || GameManager.instance.BoardRockData[vector.x + _origin.x, vector.y + _origin.y])
+            if (OutOfBoundsHelper(vector.x+_origin.x,vector.y+_origin.y))
             {
                 returnValue = true;
             }
@@ -130,84 +145,63 @@ public class UnitTilesContainer
     }
 
     /// <summary>
-    /// Returns true if the unit cannot rotate at _origin position.
+    /// Returns true if the unit cannot rotate at _origin position. (aka OOB)
     /// </summary>
     /// <param name="_tilePositions"></param>
     /// <param name="_origin"></param>
     /// <param name="_rotationDelta">Integer between -2 and 2</param>
     /// <returns></returns>
-    public bool CheckIfCannotRotate(Vector2Int _origin, int _rotation, int _rotationDelta)
+    public bool CheckIfCannotRotate(Vector2Int _origin, int _initialRotation, int _rotationDelta)
     {
         switch (_rotationDelta)
         {
             case 0:
                 return false;
+
             case 1:
                 foreach(Vector2Int vector in rightRotationSweep)
                 {
-                    Vector2Int rotatedVector = RotateVector2Int(vector, _rotation);
-                    Debug.Log("Checking " + rotatedVector + " for rotation sweep from " + _origin);
-                    if (rotatedVector.x + _origin.x >= 0
-                        && rotatedVector.x + _origin.x < BoardManager.columns
-                        && rotatedVector.y + _origin.y >= 0
-                        && rotatedVector.y + _origin.y < BoardManager.rows
-                        && GameManager.instance.BoardRockData[rotatedVector.x+_origin.x,rotatedVector.y+_origin.y])
+                    Vector2Int rotatedVector = RotateVector2Int(vector, _initialRotation);
+                    if (OutOfBoundsHelper(rotatedVector.x + _origin.x, rotatedVector.y + _origin.y))
                     {
-                        Debug.Log("Sweep failed");
                         return true;
                     }
                 }
-                Debug.Log("Sweep succeeded");
                 return false;
+
             case -1:
                 foreach (Vector2Int vector in leftRotationSweep)
                 {
-                    Vector2Int rotatedVector = RotateVector2Int(vector, _rotation);
-                    Debug.Log("Checking " + rotatedVector + " for rotation sweep from " + _origin);
-                    if (rotatedVector.x + _origin.x >= 0
-                        && rotatedVector.x + _origin.x < BoardManager.columns
-                        && rotatedVector.y + _origin.y >= 0
-                        && rotatedVector.y + _origin.y < BoardManager.rows
-                        && GameManager.instance.BoardRockData[rotatedVector.x + _origin.x, rotatedVector.y + _origin.y])
+                    Vector2Int rotatedVector = RotateVector2Int(vector, _initialRotation);
+                    if (OutOfBoundsHelper(rotatedVector.x + _origin.x, rotatedVector.y + _origin.y))
                     {
-                        //Debug.Log("Sweep failed");
                         return true;
                     }
                 }
                 return false;
+
             case 3:
             case -3:
             case 2:
             case -2:
                 foreach (Vector2Int vector in rightRotationSweep)
                 {
-                    Vector2Int rotatedVector = RotateVector2Int(vector, _rotation);
-                    Debug.Log("Checking " + rotatedVector + " for rotation sweep from " + _origin);
-                    if (rotatedVector.x + _origin.x >= 0
-                        && rotatedVector.x + _origin.x < BoardManager.columns
-                        && rotatedVector.y + _origin.y >= 0
-                        && rotatedVector.y + _origin.y < BoardManager.rows
-                        && GameManager.instance.BoardRockData[rotatedVector.x + _origin.x, rotatedVector.y + _origin.y])
+                    Vector2Int rotatedVector = RotateVector2Int(vector, _initialRotation);
+                    if (OutOfBoundsHelper(rotatedVector.x + _origin.x, rotatedVector.y + _origin.y))
                     {
-                        Debug.Log("Sweep failed");
                         return true;
                     }
                 }
                 foreach (Vector2Int vector in leftRotationSweep)
                 {
-                    Vector2Int rotatedVector = RotateVector2Int(vector, _rotation);
-                    Debug.Log("Checking " + rotatedVector + " for rotation sweep from " + _origin);
-                    if (rotatedVector.x + _origin.x >= 0
-                        && rotatedVector.x + _origin.x < BoardManager.columns
-                        && rotatedVector.y + _origin.y >= 0
-                        && rotatedVector.y + _origin.y < BoardManager.rows
-                        && GameManager.instance.BoardRockData[rotatedVector.x + _origin.x, rotatedVector.y + _origin.y])
+                    Vector2Int rotatedVector = RotateVector2Int(vector, _initialRotation);
+                    if (OutOfBoundsHelper(rotatedVector.x + _origin.x, rotatedVector.y + _origin.y))
                     {
-                        //Debug.Log("Sweep failed");
                         return true;
                     }
                 }
                 return false;
+
         }
         return false;
     }
